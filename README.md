@@ -45,6 +45,10 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Architecture
+
+![Bids architecture](./assets/bids-architecture.png)
+
 ## Test
 
 ```bash
