@@ -1,0 +1,57 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/bids/src",
+  "monorepo": true,
+  "root": "apps/bids",
+  "compilerOptions": {
+    "webpack": true,
+    "tsConfigPath": "apps/bids/tsconfig.app.json"
+  },
+  "projects": {
+    "bids": {
+      "type": "application",
+      "root": "apps/bids",
+      "entryFile": "main",
+      "sourceRoot": "apps/bids/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bids/tsconfig.app.json"
+      }
+    },
+    "subscriber": {
+      "type": "application",
+      "root": "apps/subscriber",
+      "entryFile": "main",
+      "sourceRoot": "apps/subscriber/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/subscriber/tsconfig.app.json"
+      }
+    },
+    "queue": {
+      "type": "application",
+      "root": "apps/queue",
+      "entryFile": "main",
+      "sourceRoot": "apps/queue/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/queue/tsconfig.app.json"
+      }
+    },
+    "event": {
+      "type": "application",
+      "root": "apps/event",
+      "entryFile": "main",
+      "sourceRoot": "apps/event/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/event/tsconfig.app.json"
+      }
+    },
+    "repository": {
+      "type": "application",
+      "root": "apps/repository",
+      "entryFile": "main",
+      "sourceRoot": "apps/repository/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/repository/tsconfig.app.json"
+      }
+    }
+  }
+}
