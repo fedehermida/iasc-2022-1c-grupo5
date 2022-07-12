@@ -1,15 +1,41 @@
-import { Buyer, JSONObject } from './types';
+import { IsNumber, IsObject, IsPositive } from '@nestjs/class-validator';
+import { IsArray, IsNotEmpty, IsString } from 'class-validator';
 
-export type CreateBuyerDto = Buyer;
+import { JSONObject } from './types';
 
-export interface CreateBidDto {
-  duration: number;
-  basePrice: number;
+export class CreateBuyerDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  ip: string;
+
+  @IsArray()
   tags: string[];
+}
+
+export class CreateBidDto {
+  @IsPositive()
+  duration: number;
+
+  @IsNumber()
+  basePrice: number;
+
+  @IsArray()
+  tags: string[];
+
+  @IsObject()
   item: JSONObject;
 }
 
-export interface CreateOfferDto {
+export class CreateOfferDto {
+  @IsString()
+  @IsNotEmpty()
   ip: string;
+
+  @IsNumber()
+  @IsPositive()
   price: number;
 }
