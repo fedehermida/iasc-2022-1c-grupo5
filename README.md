@@ -49,6 +49,119 @@ $ npm run start:prod
 
 ![Bids architecture](./assets/bids-architecture.png)
 
+- **Caso 1: Un comprador se registra**
+```mermaid
+sequenceDiagram
+CLIENT ->> SUBSCRIBER SERVICE: POST /buyers
+SUBSCRIBER SERVICE->>REPOSITORY: POST /tags/{tag}/buyers
+Note right of SUBSCRIBER SERVICE: QUEUE
+Note right of REPOSITORY: Si encuentra subastas en esa tags
+REPOSITORY-->>EVENT SERVICE: WS send({ "bids": {}, "to": "0.0.0.0", "event": CREATE})
+EVENT SERVICE ->>CLIENT: POST /bids/{id} 
+```
+
+- **Caso 2: Un vendedor crea una subasta**
+```mermaid
+sequenceDiagram
+CLIENT ->> SUBSCRIBER SERVICE: POST /bids
+SUBSCRIBER SERVICE-->> CLIENT: 200 id
+SUBSCRIBER SERVICE->>REPOSITORY: POST /tags/{tag}/bids
+Note right of SUBSCRIBER SERVICE: QUEUE
+Note right of REPOSITORY: Si encuentra compradores en esa tags
+REPOSITORY-->>EVENT SERVICE: WS send({ "bids": {}, "to": "0.0.0.0", "event": "CREATE"})
+EVENT SERVICE ->>BUYERS: POST /bids/{id} 
+```
+- **Caso 3: Un vendedor elimina una subasta**
+```mermaid
+sequenceDiagram
+CLIENT ->> SUBSCRIBER SERVICE: DELETE /bids/{id}
+SUBSCRIBER SERVICE->>REPOSITORY: DELETE /tags/{tag}/bids/{id}
+Note right of SUBSCRIBER SERVICE: QUEUE
+Note right of REPOSITORY: Si encuentra compradores en esa tags
+REPOSITORY-->>EVENT SERVICE: WS send({ "bids": {}, "to": "0.0.0.0", "event": "DELETE"})
+EVENT SERVICE ->>BUYERS: DELETE /bids/{id} 
+```
+
+- **Caso 4: Un comprador subasta un nuevo precio**
+```mermaid
+sequenceDiagram
+CLIENT ->> SUBSCRIBER SERVICE: PUT /bids/{id}
+SUBSCRIBER SERVICE->>REPOSITORY: POST /tags/{tag}/bids/{id}
+Note right of SUBSCRIBER SERVICE: QUEUE
+Note right of REPOSITORY: Si encuentra compradores en esa tags
+REPOSITORY-->>EVENT SERVICE: WS send({ "bids": {}, "to": "0.0.0.0", "event": "MODIFY"})
+EVENT SERVICE ->>BUYERS: POST /bids/{id} 
+```
+
+- **Caso 5: Se finaliza el plazo de la subasta**
+```mermaid
+sequenceDiagram
+REPOSITORY-->>EVENT SERVICE: WS send({ "bids": {}, "to": "0.0.0.0", "event": "DELETE"})
+EVENT SERVICE ->>BUYERS: DELETE /bids/{id} 
+Note left of REPOSITORY: Si tiene compradores
+```
+
+## Endpoints
+### Comprador
+**POST** /bids/{id} 
+> Notifica una creacion/modificacion de subasta al comprador
+
+    {
+      "price": 0,
+      "duration": 3600,
+      "article": {
+        "name": "",
+        "description": ""
+      }
+    }
+**DELETE** /bids/{id}
+> Notifica que se finalizo una subasta
+
+    {
+        "winner": {{name}},
+        "price": 100
+    }
+
+
+### Servicio de subastas
+**POST** /bids 
+> El vendedor crea una subasta
+
+    {                                      
+      "tags": ["hogar", "muebles"]         
+      "price": 0,                          
+      "duration": 3600,                    
+      "article": {                         
+        "name": "",                        
+        "description": ""                  
+      }                                    
+    }                                      
+
+Response
+
+    {
+      "id": 1
+    }
+**DELETE** /bids/{{id}}
+> El vendedor cancela la subasta
+
+**POST** /buyers 
+> El comprador se da de alta
+
+    {
+      "name": ""
+      "ip": 0.0.0.0,
+      "tags": ["hogar"]
+     }
+
+**PUT** /bids/{id} 
+> El comprador oferta un nuevo precio
+
+    {
+      "price": 0,
+      "ip": 0.0.0.0
+    }
+
 ## Test
 
 ```bash
