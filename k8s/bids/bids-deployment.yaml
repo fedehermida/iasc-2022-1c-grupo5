@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bids-deployment
+spec:
+  selector:
+    matchLabels:
+      component: bids
+  template:
+    metadata:
+      labels:
+        component: bids
+    spec:
+      containers:
+        - name: bids
+          image: fedehermida/bids
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SERVICE
+              value: bids
+            - name: EVENT_URL
+              value: event-cluster-ip-service:3000
+            - name: REPOSITORY_URL
+              value: repository-cluster-ip-service:3000
+            - name: QUEUE_URL
+              value: queue-cluster-ip-service:3000
+            - name: SUBSCRIBER_URL
+              value: subscriber-cluster-ip-service:3000

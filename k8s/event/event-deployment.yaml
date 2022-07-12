@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-deployment
+spec:
+  selector:
+    matchLabels:
+      component: event
+  template:
+    metadata:
+      labels:
+        component: event
+    spec:
+      containers:
+        - name: event
+          image: fedehermida/event
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SERVICE
+              value: event
