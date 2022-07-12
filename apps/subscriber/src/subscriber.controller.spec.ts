@@ -16,7 +16,9 @@ describe('SubscriberController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(subscriberController.getHello()).toBe('Hello World!');
+      expect(subscriberController.getHello()).toBe(
+        'Hello World from subscriber service!',
+      );
     });
   });
 });

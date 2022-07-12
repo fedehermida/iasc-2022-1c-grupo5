@@ -1,8 +1,6 @@
-export interface CreateBuyerDto {
-  name: string;
-  ip: string;
-  tags: string[];
-}
+import { Buyer, JSONObject } from './types';
+
+export type CreateBuyerDto = Buyer;
 
 export interface CreateBidDto {
   duration: number;
@@ -15,6 +13,3 @@ export interface CreateOfferDto {
   ip: string;
   price: number;
 }
-
-type JSONObject = { [x: string]: JSONValue };
-type JSONValue = string | number | boolean | JSONObject | JSONValue[];

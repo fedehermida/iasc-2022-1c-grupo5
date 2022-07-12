@@ -16,7 +16,9 @@ describe('EventController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(eventController.getHello()).toBe('Hello World!');
+      expect(eventController.getHello()).toBe(
+        'Hello World from Event Service!',
+      );
     });
   });
 });

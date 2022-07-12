@@ -16,7 +16,9 @@ describe('QueueController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(queueController.getHello()).toBe('Hello World!');
+      expect(queueController.getHello()).toBe(
+        'Hello World from Queue Service!',
+      );
     });
   });
 });
