@@ -1,0 +1,107 @@
+version: '3.7'
+
+services:
+  bids:
+    container_name: bids
+    build:
+      context: .
+      args:
+        SERVICE: bids
+      target: development
+    volumes:
+      - './apps/bids:/workspace/apps/bids'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service bids
+    ports:
+      - 6000:3000
+      - 20000:9229
+    env_file: ${BIDS_ENV}
+    environment:
+      - ENVIRONMENT=docker
+    networks:
+      - iasc-api-network
+
+  event:
+    container_name: event
+    build:
+      context: .
+      args:
+        SERVICE: event
+      target: development
+    volumes:
+      - './apps/event:/workspace/apps/event'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service event
+    ports:
+      - 6001:3000
+      - 20001:9229
+    env_file: ${EVENT_ENV}
+    environment:
+      - ENVIRONMENT=docker
+    networks:
+      - iasc-api-network
+
+  repository:
+    container_name: repository
+    build:
+      context: .
+      args:
+        SERVICE: repository
+      target: development
+    volumes:
+      - './apps/repository:/workspace/apps/repository'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service repository
+    ports:
+      - 6002:3000
+      - 20002:9229
+    env_file: ${REPOSITORY_ENV}
+    environment:
+      - ENVIRONMENT=docker
+    networks:
+      - iasc-api-network
+
+  subscriber:
+    container_name: subscriber
+    build:
+      context: .
+      args:
+        SERVICE: subscriber
+      target: development
+    volumes:
+      - './apps/subscriber:/workspace/apps/subscriber'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service subscriber
+    ports:
+      - 6003:3000
+      - 20003:9229
+    env_file: ${SUBSCRIBER_ENV}
+    networks:
+      - iasc-api-network
+
+  queue:
+    container_name: queue
+    build:
+      context: .
+      args:
+        SERVICE: queue
+      target: development
+    volumes:
+      - './apps/queue:/workspace/apps/queue'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service queue
+    ports:
+      - 6004:3000
+      - 20004:9229
+    env_file: ${QUEUE_ENV}
+    networks:
+      - iasc-api-network
+
+networks:
+  iasc-api-network:
+    driver: bridge
