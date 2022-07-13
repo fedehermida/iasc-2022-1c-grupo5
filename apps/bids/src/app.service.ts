@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Bid, Buyer, Offer } from './types';
+import { Bid, BidState, Buyer, Offer } from './types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { HttpService } from '@nestjs/axios';
@@ -122,8 +122,10 @@ export class AppService {
   }
 
   async getBidsByTags(tags: string[]) {
-    return this.bids.filter((bid) =>
-      bid.tags.some((tag) => tags.includes(tag)),
+    return this.bids.filter(
+      (bid) =>
+        bid.tags.some((tag) => tags.includes(tag)) &&
+        bid.state === BidState.OPEN,
     );
   }
 
@@ -148,45 +150,65 @@ export class AppService {
         bids,
       }),
     );
-    return buyer;
+
+    // devuelve las subastas que le interesan a este comprador
+    return { buyer, bids };
   }
 
   async createBid(bid: Omit<Bid, 'id' | 'offers'>) {
+    // repository
     const newBid = { ...bid, id: uuidv4(), offers: [] };
     this.bids.push(newBid);
-    this.handleEvent({
-      type: 'bid_created',
-      bid: newBid,
-    });
+
+    // event
+    this.handleEvent({ type: 'bid_created', bid: newBid });
+
     setTimeout(() => {
       this.endBid(newBid.id);
     }, newBid.duration);
+
     return newBid;
   }
 
   async endBid(id: string) {
+    // repository
     const bid = await this.getBid(id);
+    this.bids = this.bids.map((bid) =>
+      bid.id === id ? { ...bid, state: BidState.ENDED } : bid,
+    );
+
+    // event
     this.handleEvent({
       type: 'bid_ended',
       bid,
     });
+
     console.log(`bid: ${id} has ended`);
   }
 
   async registerOffer(id: string, offer: Offer) {
+    // repository
     const bid = await this.getBid(id);
     bid.offers.push(offer);
+
+    // event
     this.handleEvent({
       type: 'bid_offer',
       bid,
       offer,
     });
+
     console.log(`${offer.ip} has offered ${offer.price}`);
   }
 
   async deleteBid(id: string) {
+    // repository
     const bid = await this.getBid(id);
-    this.bids = this.bids.filter((bid) => bid.id !== id);
+    this.bids = this.bids.map((bid) =>
+      bid.id === id ? { ...bid, state: BidState.CANCELED } : bid,
+    );
+
+    // event
     this.handleEvent({
       type: 'bid_deleted',
       bid,

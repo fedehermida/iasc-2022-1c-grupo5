@@ -1,7 +1,7 @@
 import { IsNumber, IsObject, IsPositive } from '@nestjs/class-validator';
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
-import { JSONObject } from './types';
+import { BidState, JSONObject } from './types';
 
 export class CreateBuyerDto {
   @IsString()

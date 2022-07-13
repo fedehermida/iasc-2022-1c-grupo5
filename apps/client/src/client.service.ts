@@ -12,12 +12,8 @@ const BIDS_SERVICE = `http://127.0.0.1:3000`;
 @Injectable()
 export class ClientService {
   ip = `http://127.0.0.1:${process.env.PORT}`;
-  
-  constructor(private readonly httpService: HttpService) {}
 
-  getHello(): string {
-    return 'Hello World!';
-  }
+  constructor(private readonly httpService: HttpService) {}
 
   async register() {
     const a = await this.httpService.post(
@@ -30,13 +26,15 @@ export class ClientService {
       { headers: { 'Content-Type': 'application/json' } },
     );
     const data = (await lastValueFrom(a)).data;
+    console.log(data);
+    return data;
   }
 
   async registerOffer(id) {
     const data = await lastValueFrom(
       this.httpService.put(`${BIDS_SERVICE}/bids/${id}`, {
         ip: this.ip,
-        price: Math.random() * 5000,
+        price: Math.round(Math.random() * 5000),
       }),
     );
   }

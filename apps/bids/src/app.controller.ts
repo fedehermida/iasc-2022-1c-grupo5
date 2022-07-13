@@ -1,12 +1,7 @@
-import {
-  Body,
-  Controller,
-  Delete, Param,
-  Post,
-  Put
-} from '@nestjs/common';
+import { Body, Controller, Delete, Param, Post, Put } from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from './dto';
+import { BidState } from './types';
 
 @Controller()
 export class AppController {
@@ -23,7 +18,7 @@ export class AppController {
   async createBid(@Body() bid: CreateBidDto) {
     console.log('POST /bids');
     console.log({ bid });
-    return await this.appService.createBid(bid);
+    return await this.appService.createBid({ ...bid, state: BidState.OPEN });
   }
 
   @Delete('/bids/:id')

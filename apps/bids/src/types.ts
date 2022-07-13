@@ -11,7 +11,14 @@ export type Bid = {
   duration: number;
   item: JSONObject;
   offers: Offer[];
+  state: BidState;
 };
+
+export enum BidState {
+  OPEN = 'open',
+  ENDED = 'ended',
+  CANCELED = 'cancled',
+}
 
 export type Offer = {
   ip: string;
