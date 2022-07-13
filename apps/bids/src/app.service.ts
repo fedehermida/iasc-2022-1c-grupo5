@@ -12,28 +12,28 @@ export class AppService {
 
   async getEventHealth(): Promise<string> {
     const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`http://${process.env.EVENT_URL}/`),
+      this.httpService.get<string>(`${process.env.EVENT_URL}`),
     );
     return await pingRepository.data;
   }
 
   async getQueueHealth(): Promise<string> {
     const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`http://${process.env.QUEUE_URL}/`),
+      this.httpService.get<string>(`${process.env.QUEUE_URL}`),
     );
     return await pingRepository.data;
   }
 
   async getRepositoryHealth(): Promise<string> {
     const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`http://${process.env.REPOSITORY_URL}/`),
+      this.httpService.get<string>(`${process.env.REPOSITORY_URL}`),
     );
     return await pingRepository.data;
   }
 
   async getSubscriberHealth(): Promise<string> {
     const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`http://${process.env.SUBSCRIBER_URL}/`),
+      this.httpService.get<string>(`${process.env.SUBSCRIBER_URL}`),
     );
     return await pingRepository.data;
   }
