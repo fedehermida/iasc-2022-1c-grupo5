@@ -15,18 +15,17 @@ export class ClientService {
 
   constructor(private readonly httpService: HttpService) {}
 
-  async register() {
+  async register(tags: string[]) {
     const a = await this.httpService.post(
       `${BIDS_SERVICE}/buyers`,
       {
         name: names[process.env.PORT],
         ip: this.ip,
-        tags: ['hogar'],
+        tags,
       },
       { headers: { 'Content-Type': 'application/json' } },
     );
     const data = (await lastValueFrom(a)).data;
-    console.log(data);
     return data;
   }
 

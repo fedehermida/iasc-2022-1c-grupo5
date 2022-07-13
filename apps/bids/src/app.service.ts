@@ -1,117 +1,98 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Bid, BidState, Buyer, Offer } from './types';
 
-import { lastValueFrom } from 'rxjs';
+import { ClientRedis } from '@nestjs/microservices';
+import { firstValueFrom, lastValueFrom } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-;
 
-type Event =
+type BidEvent =
   | { type: 'bid_created'; bid: Bid }
-  | { type: 'bid_deleted'; bid: Bid }
+  | { type: 'bid_canceled'; bid: Bid }
   | { type: 'bid_offer'; bid: Bid; offer: Offer }
   | { type: 'bid_ended'; bid: Bid };
 
 @Injectable()
 export class AppService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    @Inject('REPOSITORY_CLIENT') private readonly repositoryClient: ClientRedis,
+  ) {}
 
   buyers: Buyer[] = [];
   bids: Bid[] = [];
 
-  async handleEvent(event: Event) {
-    const bid = await this.getBid(event.bid.id);
+  async handleBidEvent(event: BidEvent) {
+    const bid = event.bid;
+    const buyers = await this.getBuyersForTags(bid.tags);
     switch (event.type) {
-      case 'bid_created': {
-        this.buyers
-          .filter((buyer) => buyer.tags.some((tag) => bid.tags.includes(tag)))
-          .forEach((buyer) => {
-            lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
-              .then((res) => {
-                console.log(`${buyer.name} has been notified about ${bid.id}`);
-              })
-              .catch((err) => console.log(err));
-          });
-        break;
-      }
-      case 'bid_deleted': {
-        this.getBiddersForBid(bid.id).then((bidders) => {
-          bidders.forEach((buyer) => {
-            lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
-              .then((res) => {
-                console.log(
-                  `${buyer.name} has been notified about ${bid.id} deletion`,
-                );
-              })
-              .catch((err) => console.log(err));
-          });
-        });
-        break;
-      }
-      case 'bid_offer': {
-        this.getBiddersForBid(bid.id).then((bidders) => {
-          bidders
-            .filter((buyer) => buyer.ip !== event.offer.ip)
-            .forEach((buyer) => {
-              lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
-                .then((res) => {
-                  console.log(
-                    `${buyer.name} has been notified about ${bid.id} offer`,
-                  );
-                })
-                .catch((err) => console.log(err));
-            });
+      case 'bid_created':
+      case 'bid_canceled': {
+        buyers.forEach((buyer) => {
+          lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event));
         });
         break;
       }
       case 'bid_ended': {
         const winnerOffer = bid.offers.reduce((prev, curr) => {
-          if (prev === undefined) {
-            return curr;
-          } else {
-            return prev.price > curr.price ? prev : curr;
-          }
+          return prev !== undefined && prev.price > curr.price ? prev : curr;
         }, undefined as Offer | undefined);
-        if (winnerOffer) {
-          this.getBiddersForBid(bid.id).then((bidders) => {
-            bidders.forEach((buyer) => {
-              if (buyer.ip === winnerOffer.ip) {
-                lastValueFrom(
-                  this.httpService.post(`${buyer.ip}/event`, {
-                    type: 'bid_won',
-                    bid,
-                  }),
-                )
-                  .then((res) => {
-                    console.log(`${buyer.name} has won ${bid.id}`);
-                  })
-                  .catch((err) => console.log(err));
-              } else {
-                lastValueFrom(
-                  this.httpService.post(`${buyer.ip}/event`, {
-                    type: 'bid_lost',
-                    bid,
-                  }),
-                )
-                  .then((res) => {
-                    console.log(`${buyer.name} has lost ${bid.id}`);
-                  })
-                  .catch((err) => console.log(err));
-              }
-            });
+        if (winnerOffer !== undefined) {
+          buyers.forEach((buyer) => {
+            if (buyer.ip === winnerOffer.ip) {
+              lastValueFrom(
+                this.httpService.post(`${buyer.ip}/event`, {
+                  type: 'bid_won',
+                  bid,
+                }),
+              );
+            } else {
+              lastValueFrom(
+                this.httpService.post(`${buyer.ip}/event`, {
+                  type: 'bid_lost',
+                  bid,
+                }),
+              );
+            }
           });
         } else {
-          this.getBiddersForBid(bid.id).then((bidders) => {
-            bidders.forEach((buyer) => {
-              console.log(
-                `${buyer.name} has been notified about ${bid.id}, noone won`,
-              );
-            });
+          buyers.forEach((buyer) => {
+            lastValueFrom(
+              this.httpService.post(`${buyer.ip}/event`, {
+                type: 'no_one_won',
+                bid,
+              }),
+            );
           });
         }
         break;
       }
+      case 'bid_offer': {
+        buyers
+          .filter((buyer) => buyer.ip !== event.offer.ip)
+          .forEach((buyer) => {
+            lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event));
+          });
+
+        const offerer = buyers.find((buyer) => buyer.ip === event.offer.ip);
+        if (offerer !== undefined) {
+          lastValueFrom(
+            this.httpService.post(`${offerer.ip}/event`, {
+              type: 'bid_offer_accepted',
+              bid,
+              offer: event.offer,
+            }),
+          );
+        }
+        break;
+      }
     }
+  }
+
+  async getBuyersForTags(tags: string[]) {
+    return await this.buyers.filter((buyer) => {
+      return buyer.tags.some((tag) => tags.includes(tag));
+    });
   }
 
   async getBiddersForBid(bidId: string) {
@@ -139,18 +120,21 @@ export class AppService {
     }
   }
 
+  /* *** */
+
   async registerBuyer(buyer: Buyer) {
+    // así se lo manda al servicio repositorio
+    // firstValueFrom(
+    //   this.repositoryClient.send({ cmd: 'registerBuyer' }, { buyer }),
+    // )
+    //   .then((res) => {
+    //     console.log(res);
+    //   })
+    //   .catch((err) => console.log(err));
+
     this.buyers.push(buyer);
-    console.log(`${buyer.name} has been registered`);
 
     const bids = await this.getBidsByTags(buyer.tags);
-
-    await lastValueFrom(
-      this.httpService.post(`${buyer.ip}/event`, {
-        type: 'bids_available',
-        bids,
-      }),
-    );
 
     // devuelve las subastas que le interesan a este comprador
     return { buyer, bids };
@@ -161,13 +145,11 @@ export class AppService {
     const newBid = { ...bid, id: uuidv4(), offers: [] };
     this.bids.push(newBid);
 
-    // event
-    this.handleEvent({ type: 'bid_created', bid: newBid });
-
     setTimeout(() => {
       this.endBid(newBid.id);
     }, newBid.duration);
 
+    this.handleBidEvent({ type: 'bid_created', bid: newBid });
     return newBid;
   }
 
@@ -178,13 +160,8 @@ export class AppService {
       bid.id === id ? { ...bid, state: BidState.ENDED } : bid,
     );
 
-    // event
-    this.handleEvent({
-      type: 'bid_ended',
-      bid,
-    });
-
-    console.log(`bid: ${id} has ended`);
+    // event bid ended
+    this.handleBidEvent({ type: 'bid_ended', bid });
   }
 
   async registerOffer(id: string, offer: Offer) {
@@ -192,30 +169,23 @@ export class AppService {
     const bid = await this.getBid(id);
     bid.offers.push(offer);
 
-    // event
-    this.handleEvent({
-      type: 'bid_offer',
-      bid,
-      offer,
-    });
-
-    console.log(`${offer.ip} has offered ${offer.price}`);
+    // event bid offer
+    this.handleBidEvent({ type: 'bid_offer', bid, offer });
   }
 
-  async deleteBid(id: string) {
+  async cancelBid(id: string) {
     // repository
     const bid = await this.getBid(id);
     this.bids = this.bids.map((bid) =>
       bid.id === id ? { ...bid, state: BidState.CANCELED } : bid,
     );
 
-    // event
-    this.handleEvent({
-      type: 'bid_deleted',
-      bid,
-    });
+    // event bid_canceled
+    this.handleBidEvent({ type: 'bid_canceled', bid });
   }
-  
+
+  /* HEALTH */
+
   getHello(): string {
     return 'Hello World from bids!';
   }

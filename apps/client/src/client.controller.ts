@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseArrayPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ClientService } from './client.service';
 
 @Controller()
@@ -6,24 +15,24 @@ export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
   @Get('/register')
-  async registerBuyer() {
-    return await this.clientService.register();
+  async registerBuyer(
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',' }))
+    tags: string[],
+  ) {
+    const res = await this.clientService.register(tags);
+    if (res.bids.length !== 0) {
+      this.clientService.registerOffer(res.bids[0].id);
+    }
   }
 
   @Post('/event')
   async bidsHook(@Body() event: any) {
-    if (event.type === 'bids_available' && event.bids.length > 0) {
-      const firstBidId = event.bids[0].id;
-      setTimeout(() => {
-        this.clientService.registerOffer(firstBidId);
-      }, Math.round(Math.random() * 5000));
-    }
+    console.log(event);
     if (event.type === 'bid_created') {
       setTimeout(() => {
         this.clientService.registerOffer(event.bid.id);
       }, Math.round(Math.random() * 5000));
     }
-    console.log(event);
   }
 
   // Tiene hooks para ciertos eventos

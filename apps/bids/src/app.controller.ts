@@ -15,9 +15,14 @@ import { BidState } from './types';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get('/health')
-  bidsHealth(): string {
-    return this.appService.getHello();
+  @Get('/status')
+  async getStatus() {
+    const buyers = this.appService.buyers;
+    const bids = this.appService.bids;
+    return {
+      buyers,
+      bids,
+    };
   }
 
   @Post('/buyers')
@@ -36,16 +41,22 @@ export class AppController {
 
   @Delete('/bids/:id')
   async deleteBid(@Param('id') id: string) {
-    console.log('DELETE /bids/:id');
-    console.log({ id });
-    return await this.appService.deleteBid(id);
+    console.log(`DELETE /bids/${id}`);
+    return await this.appService.cancelBid(id);
   }
 
   @Put('/bids/:id')
   async registerOffer(@Param('id') id: string, @Body() offer: CreateOfferDto) {
-    console.log('PUT /bids/:id');
-    console.log({ id, offer });
+    console.log(`PUT /bids/${id}`);
+    console.log({ offer });
     return await this.appService.registerOffer(id, offer);
+  }
+
+  /* HEALTH */
+
+  @Get('/health')
+  bidsHealth(): string {
+    return this.appService.getHello();
   }
 
   @Get('/event-health')
