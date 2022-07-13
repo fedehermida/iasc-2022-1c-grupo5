@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
+import { ClientGateway } from './client.gateway';
 
 const names = {
   '3001': 'Alice',
@@ -13,7 +14,10 @@ const BIDS_SERVICE = `http://127.0.0.1:3000`;
 export class ClientService {
   ip = `http://127.0.0.1:${process.env.PORT}`;
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly clientGateway: ClientGateway,
+  ) {}
 
   async register(tags: string[]) {
     const a = await this.httpService.post(
@@ -36,5 +40,9 @@ export class ClientService {
         price: Math.round(Math.random() * 5000),
       }),
     );
+  }
+
+  async newBid(bid) {
+    this.clientGateway.server.emit('bid_created', bid);
   }
 }

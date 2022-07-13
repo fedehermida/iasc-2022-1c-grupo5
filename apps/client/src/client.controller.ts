@@ -25,10 +25,16 @@ export class ClientController {
     }
   }
 
+  @Get('/offer/:id')
+  async registerOffer(@Param('id') id: string) {
+    this.clientService.registerOffer(id);
+  }
+
   @Post('/event')
   async bidsHook(@Body() event: any) {
     console.log(event);
     if (event.type === 'bid_created') {
+      this.clientService.newBid(event.bid);
       setTimeout(() => {
         this.clientService.registerOffer(event.bid.id);
       }, Math.round(Math.random() * 5000));
