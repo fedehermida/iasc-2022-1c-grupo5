@@ -1,0 +1,83 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Bids Debug",
+      "address": "0.0.0.0",
+      "port": 20000,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Event Debug",
+      "address": "0.0.0.0",
+      "port": 20001,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Queue Debug",
+      "address": "0.0.0.0",
+      "port": 20002,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Repository Debug",
+      "address": "0.0.0.0",
+      "port": 20003,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Notifications Debug",
+      "address": "0.0.0.0",
+      "port": 20004,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Subscriber Debug",
+      "address": "0.0.0.0",
+      "port": 20005,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/workspace",
+      "trace": true,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
