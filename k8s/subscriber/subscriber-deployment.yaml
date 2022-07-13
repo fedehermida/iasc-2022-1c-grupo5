@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscriber-deployment
+spec:
+  selector:
+    matchLabels:
+      component: subscriber
+  template:
+    metadata:
+      labels:
+        component: subscriber
+    spec:
+      containers:
+        - name: subscriber
+          image: fedehermida/subscriber
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SERVICE
+              value: subscriber

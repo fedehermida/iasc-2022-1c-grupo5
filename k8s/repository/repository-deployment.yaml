@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repository-deployment
+spec:
+  selector:
+    matchLabels:
+      component: repository
+  template:
+    metadata:
+      labels:
+        component: repository
+    spec:
+      containers:
+        - name: repository
+          image: fedehermida/repository
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SERVICE
+              value: repository
