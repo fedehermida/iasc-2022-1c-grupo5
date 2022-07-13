@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Bid, Buyer, Offer } from './types';
 
 import { v4 as uuidv4 } from 'uuid';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
 
 type Event =
   | { type: 'bid_created'; bid: Bid }
@@ -11,6 +13,8 @@ type Event =
 
 @Injectable()
 export class AppService {
+  constructor(private readonly httpService: HttpService) {}
+
   buyers: Buyer[] = [];
   bids: Bid[] = [];
 
@@ -21,16 +25,24 @@ export class AppService {
         this.buyers
           .filter((buyer) => buyer.tags.some((tag) => bid.tags.includes(tag)))
           .forEach((buyer) => {
-            console.log(`${buyer.name} has been notified about ${bid.id}`);
+            lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
+              .then((res) => {
+                console.log(`${buyer.name} has been notified about ${bid.id}`);
+              })
+              .catch((err) => console.log(err));
           });
         break;
       }
       case 'bid_deleted': {
         this.getBiddersForBid(bid.id).then((bidders) => {
           bidders.forEach((buyer) => {
-            console.log(
-              `${buyer.name} has been notified about ${bid.id} deletion`,
-            );
+            lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
+              .then((res) => {
+                console.log(
+                  `${buyer.name} has been notified about ${bid.id} deletion`,
+                );
+              })
+              .catch((err) => console.log(err));
           });
         });
         break;
@@ -40,9 +52,13 @@ export class AppService {
           bidders
             .filter((buyer) => buyer.ip !== event.offer.ip)
             .forEach((buyer) => {
-              console.log(
-                `${buyer.name} has been notified about ${bid.id} offer`,
-              );
+              lastValueFrom(this.httpService.post(`${buyer.ip}/event`, event))
+                .then((res) => {
+                  console.log(
+                    `${buyer.name} has been notified about ${bid.id} offer`,
+                  );
+                })
+                .catch((err) => console.log(err));
             });
         });
         break;
@@ -59,11 +75,27 @@ export class AppService {
           this.getBiddersForBid(bid.id).then((bidders) => {
             bidders.forEach((buyer) => {
               if (buyer.ip === winnerOffer.ip) {
-                console.log(`${buyer.name} has won ${bid.id}`);
+                lastValueFrom(
+                  this.httpService.post(`${buyer.ip}/event`, {
+                    type: 'bid_won',
+                    bid,
+                  }),
+                )
+                  .then((res) => {
+                    console.log(`${buyer.name} has won ${bid.id}`);
+                  })
+                  .catch((err) => console.log(err));
               } else {
-                console.log(
-                  `${buyer.name} has lost ${bid.id}, ${winnerOffer.ip} won`,
-                );
+                lastValueFrom(
+                  this.httpService.post(`${buyer.ip}/event`, {
+                    type: 'bid_lost',
+                    bid,
+                  }),
+                )
+                  .then((res) => {
+                    console.log(`${buyer.name} has lost ${bid.id}`);
+                  })
+                  .catch((err) => console.log(err));
               }
             });
           });
@@ -107,11 +139,15 @@ export class AppService {
   async registerBuyer(buyer: Buyer) {
     this.buyers.push(buyer);
     console.log(`${buyer.name} has been registered`);
-    await this.getBidsByTags(buyer.tags).then((bids) => {
-      bids.forEach((bid) => {
-        console.log(`${buyer.name} has been notified about ${bid.id}`);
-      });
-    });
+
+    const bids = await this.getBidsByTags(buyer.tags);
+
+    await lastValueFrom(
+      this.httpService.post(`${buyer.ip}/event`, {
+        type: 'bids_available',
+        bids,
+      }),
+    );
     return buyer;
   }
 
@@ -139,21 +175,21 @@ export class AppService {
 
   async registerOffer(id: string, offer: Offer) {
     const bid = await this.getBid(id);
+    bid.offers.push(offer);
     this.handleEvent({
       type: 'bid_offer',
       bid,
       offer,
     });
-    bid.offers.push(offer);
     console.log(`${offer.ip} has offered ${offer.price}`);
   }
 
   async deleteBid(id: string) {
     const bid = await this.getBid(id);
+    this.bids = this.bids.filter((bid) => bid.id !== id);
     this.handleEvent({
       type: 'bid_deleted',
       bid,
     });
-    this.bids = this.bids.filter((bid) => bid.id !== id);
   }
 }
