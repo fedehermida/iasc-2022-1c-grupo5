@@ -1,10 +1,23 @@
-import { Body, Controller, Delete, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from './dto';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
+
+  @Get('/health')
+  bidsHealth(): string {
+    return this.appService.getHello();
+  }
 
   @Post('/buyers')
   async registerBuyer(@Body() buyer: CreateBuyerDto) {
