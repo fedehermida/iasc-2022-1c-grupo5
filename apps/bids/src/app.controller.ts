@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from './dto';
 import { BidState } from './types';
@@ -6,6 +14,11 @@ import { BidState } from './types';
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
+
+  @Get('/health')
+  bidsHealth(): string {
+    return this.appService.getHello();
+  }
 
   @Post('/buyers')
   async registerBuyer(@Body() buyer: CreateBuyerDto) {
@@ -33,5 +46,25 @@ export class AppController {
     console.log('PUT /bids/:id');
     console.log({ id, offer });
     return await this.appService.registerOffer(id, offer);
+  }
+
+  @Get('/event-health')
+  async getEventHello(): Promise<string> {
+    return await this.appService.getEventHealth();
+  }
+
+  @Get('/subscriber-health')
+  async getSubscriberHello(): Promise<string> {
+    return await this.appService.getSubscriberHealth();
+  }
+
+  @Get('/queue-health')
+  async getQueueHello(): Promise<string> {
+    return await this.appService.getQueueHealth();
+  }
+
+  @Get('/repository-health')
+  async getRepositoryHello(): Promise<string> {
+    return await this.appService.getRepositoryHealth();
   }
 }

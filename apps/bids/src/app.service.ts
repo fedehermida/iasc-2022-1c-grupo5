@@ -1,9 +1,10 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { Bid, BidState, Buyer, Offer } from './types';
 
-import { v4 as uuidv4 } from 'uuid';
-import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import { v4 as uuidv4 } from 'uuid';
+;
 
 type Event =
   | { type: 'bid_created'; bid: Bid }
@@ -213,5 +214,37 @@ export class AppService {
       type: 'bid_deleted',
       bid,
     });
+  }
+  
+  getHello(): string {
+    return 'Hello World from bids!';
+  }
+
+  async getEventHealth(): Promise<string> {
+    const pingRepository = await lastValueFrom(
+      this.httpService.get<string>(`${process.env.EVENT_URL}`),
+    );
+    return await pingRepository.data;
+  }
+
+  async getQueueHealth(): Promise<string> {
+    const pingRepository = await lastValueFrom(
+      this.httpService.get<string>(`${process.env.QUEUE_URL}`),
+    );
+    return await pingRepository.data;
+  }
+
+  async getRepositoryHealth(): Promise<string> {
+    const pingRepository = await lastValueFrom(
+      this.httpService.get<string>(`${process.env.REPOSITORY_URL}`),
+    );
+    return await pingRepository.data;
+  }
+
+  async getSubscriberHealth(): Promise<string> {
+    const pingRepository = await lastValueFrom(
+      this.httpService.get<string>(`${process.env.SUBSCRIBER_URL}`),
+    );
+    return await pingRepository.data;
   }
 }
