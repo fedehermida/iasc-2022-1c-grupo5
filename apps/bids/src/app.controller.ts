@@ -15,27 +15,17 @@ import { BidState } from './types';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get('/status')
-  async getStatus() {
-    const buyers = this.appService.buyers;
-    const bids = this.appService.bids;
-    return {
-      buyers,
-      bids,
-    };
-  }
-
   @Post('/buyers')
   async registerBuyer(@Body() buyer: CreateBuyerDto) {
     console.log('POST /buyers');
-    console.log({ buyer });
+    // console.log({ buyer });
     return await this.appService.registerBuyer(buyer);
   }
 
   @Post('/bids')
   async createBid(@Body() bid: CreateBidDto) {
     console.log('POST /bids');
-    console.log({ bid });
+    // console.log({ bid });
     return await this.appService.createBid({ ...bid, state: BidState.OPEN });
   }
 
@@ -48,7 +38,7 @@ export class AppController {
   @Put('/bids/:id')
   async registerOffer(@Param('id') id: string, @Body() offer: CreateOfferDto) {
     console.log(`PUT /bids/${id}`);
-    console.log({ offer });
+    // console.log({ offer });
     return await this.appService.registerOffer(id, offer);
   }
 

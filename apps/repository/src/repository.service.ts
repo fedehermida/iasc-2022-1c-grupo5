@@ -11,34 +11,43 @@ export class RepositoryService {
     return 'Hello World from Repository Service!';
   }
 
-  getBid(id: string) {
-    return this.bids.find((bid) => bid.id === id);
+  async getBid(id: string) {
+    return await this.bids.find((bid) => bid.id === id);
   }
 
-  getBidsByTags(tags: string[]) {
-    return this.buyers.filter((buyer) => {
+  async getBidsByTags(tags: string[]) {
+    return await this.buyers.filter((buyer) => {
       return buyer.tags.some((tag) => tags.includes(tag));
     });
   }
 
-  createBuyer(buyer: Buyer) {
-    this.buyers.push(buyer);
-
-    const bids = this.getBidsByTags(buyer.tags);
-
-    return { buyer, bids };
+  async createBuyer(buyer: Buyer) {
+    await this.buyers.push(buyer);
+    return buyer;
   }
 
-  createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
+  async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
     const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
-    this.bids.push(newBid);
+    await this.bids.push(newBid);
+    console.log(newBid);
     return { bid: newBid };
   }
 
-  createOffer(id: string, offer: Offer) {
-    const bid = this.getBid(id);
+  async cancelBid(id: string) {
+    this.bids = this.bids.map((bid) => {
+      if (bid.id === id) {
+        return { ...bid, state: BidState.CANCELED };
+      }
+      return bid;
+    });
+    return await this.getBid(id);
+  }
+
+  async registerOffer(id: string, offer: Offer) {
+    const bid = await this.getBid(id);
     if (bid) {
       bid.offers.push(offer);
     }
+    return bid;
   }
 }
