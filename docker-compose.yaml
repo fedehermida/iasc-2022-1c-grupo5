@@ -8,6 +8,9 @@ services:
       args:
         SERVICE: bids
       target: development
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - './apps/bids:/workspace/apps/bids'
       - './libs:/workspace/libs'
@@ -29,6 +32,9 @@ services:
       args:
         SERVICE: event
       target: development
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - './apps/event:/workspace/apps/event'
       - './libs:/workspace/libs'
@@ -50,6 +56,9 @@ services:
       args:
         SERVICE: repository
       target: development
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - './apps/repository:/workspace/apps/repository'
       - './libs:/workspace/libs'
@@ -64,50 +73,19 @@ services:
     networks:
       - iasc-api-network
 
-  subscriber:
-    container_name: subscriber
-    build:
-      context: .
-      args:
-        SERVICE: subscriber
-      target: development
-    volumes:
-      - './apps/subscriber:/workspace/apps/subscriber'
-      - './libs:/workspace/libs'
-      - './node_modules:/workspace/node_modules'
-    command: npm run start:service subscriber
-    ports:
-      - 6003:3000
-      - 20003:9229
-    env_file: ${SUBSCRIBER_ENV}
-    networks:
-      - iasc-api-network
-
-  queue:
-    container_name: queue
-    build:
-      context: .
-      args:
-        SERVICE: queue
-      target: development
-    volumes:
-      - './apps/queue:/workspace/apps/queue'
-      - './libs:/workspace/libs'
-      - './node_modules:/workspace/node_modules'
-    command: npm run start:service queue
-    ports:
-      - 6004:3000
-      - 20004:9229
-    env_file: ${QUEUE_ENV}
-    networks:
-      - iasc-api-network
-
   rabbitmq:
-    image: 'bitnami/rabbitmq:latest'
+    image: rabbitmq:3.10.6-management
+    container_name: rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - 5672:5672
+      - 15672:15672
     networks:
       - iasc-api-network
-    ports:
-      - '15672:15672'
 
 networks:
   iasc-api-network:

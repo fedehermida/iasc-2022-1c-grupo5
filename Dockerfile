@@ -4,7 +4,7 @@ ARG SERVICE
 ENV SERVICE=$SERVICE
 WORKDIR /workspace
 COPY package*.json /workspace/
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build -- ${SERVICE}
 
