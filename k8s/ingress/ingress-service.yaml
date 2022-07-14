@@ -18,7 +18,7 @@ spec:
                 name: bids-cluster-ip-service
                 port:
                   number: 3000
-          - path: /rabbitmq/?(.*)
+          - path: /*
             pathType: Prefix
             backend:
               service:
