@@ -102,6 +102,13 @@ services:
     networks:
       - iasc-api-network
 
+  rabbitmq:
+    image: 'bitnami/rabbitmq:latest'
+    networks:
+      - iasc-api-network
+    ports:
+      - '15672:15672'
+
 networks:
   iasc-api-network:
     driver: bridge
