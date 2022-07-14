@@ -59,16 +59,6 @@ export class AppController {
     return await this.appService.getEventHealth();
   }
 
-  @Get('/subscriber-health')
-  async getSubscriberHello(): Promise<string> {
-    return await this.appService.getSubscriberHealth();
-  }
-
-  @Get('/queue-health')
-  async getQueueHello(): Promise<string> {
-    return await this.appService.getQueueHealth();
-  }
-
   @Get('/repository-health')
   async getRepositoryHello(): Promise<string> {
     return await this.appService.getRepositoryHealth();
