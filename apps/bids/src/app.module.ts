@@ -4,18 +4,23 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-const REPOSITORY_CLIENT = ClientsModule.register([
-  {
-    name: 'REPOSITORY_CLIENT',
-    transport: Transport.REDIS,
-    options: {
-      url: 'redis://redis:6379',
-    },
-  },
-]);
-
 @Module({
-  imports: [HttpModule, REPOSITORY_CLIENT],
+  imports: [
+    HttpModule,
+    ClientsModule.register([
+      {
+        name: 'BIDS_QUEUE_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [`amqp://${process.env.RABBITMQ_URL}`],
+          queue: 'bids-queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+    ]),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

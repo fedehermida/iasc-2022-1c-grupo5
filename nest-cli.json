@@ -17,24 +17,6 @@
         "tsConfigPath": "apps/bids/tsconfig.app.json"
       }
     },
-    "subscriber": {
-      "type": "application",
-      "root": "apps/subscriber",
-      "entryFile": "main",
-      "sourceRoot": "apps/subscriber/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/subscriber/tsconfig.app.json"
-      }
-    },
-    "queue": {
-      "type": "application",
-      "root": "apps/queue",
-      "entryFile": "main",
-      "sourceRoot": "apps/queue/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/queue/tsconfig.app.json"
-      }
-    },
     "event": {
       "type": "application",
       "root": "apps/event",

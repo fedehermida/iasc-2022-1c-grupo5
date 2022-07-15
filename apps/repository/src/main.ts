@@ -1,22 +1,23 @@
 import { NestFactory } from '@nestjs/core';
-import { RepositoryModule } from './repository.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { RepositoryModule } from './repository.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(RepositoryModule);
 
-  app.enableCors({
-    origin: '*',
-  });
-
-  const microservice = app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.REDIS,
+  const rabbitMQService = app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
     options: {
-      url: 'redis://redis:6379',
+      urls: [`amqp://${process.env.RABBITMQ_URL}`],
+      queue: 'bids-queue',
+      noAck: false,
+      queueOptions: {
+        durable: true,
+      },
     },
   });
 
   await app.startAllMicroservices();
-  await app.listen(2000);
+  await app.listen(3000);
 }
 bootstrap();
