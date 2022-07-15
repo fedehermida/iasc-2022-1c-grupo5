@@ -22,8 +22,8 @@ export class RepositoryService {
   }
 
   async getBidsByTags(tags: string[]) {
-    return await this.buyers.filter((buyer) => {
-      return buyer.tags.some((tag) => tags.includes(tag));
+    return await this.bids.filter((bid) => {
+      return bid.tags.some((tag) => tags.includes(tag));
     });
   }
 

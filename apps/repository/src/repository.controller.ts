@@ -19,7 +19,6 @@ export class RepositoryController {
 
   @MessagePattern({ cmd: 'create_buyer' })
   async createBuyer(dto) {
-    console.log(dto);
     return await this.repositoryService.createBuyer(dto.buyer);
   }
 
