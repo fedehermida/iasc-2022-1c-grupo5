@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable } from '@nestjs/common';
 import { Bid, Buyer, Offer } from './types';
 
-import { ClientRedis } from '@nestjs/microservices';
+import { ClientProxy, ClientRedis } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { CreateBuyerDto } from './dto';
 
@@ -10,23 +10,22 @@ import { CreateBuyerDto } from './dto';
 export class AppService {
   constructor(
     private readonly httpService: HttpService,
-    @Inject('REPOSITORY_CLIENT') private readonly repositoryClient: ClientRedis,
+    @Inject('BIDS_QUEUE_SERVICE') private readonly bidsQueueClient: ClientProxy,
   ) {}
 
   async registerBuyer(buyer: CreateBuyerDto) {
     // comunicación con servicio repositorio para crear comprador
     const buyerCreated = await lastValueFrom(
-      this.repositoryClient
+      this.bidsQueueClient
         .send<Buyer>({ cmd: 'create_buyer' }, { buyer })
         .pipe(timeout(1000)),
     ).catch((err) => {
       console.log(err);
     });
-
     // comunicación con servicio repositorio para buscar
     // subastas que le interesen a este comprador
     const bids = await lastValueFrom(
-      this.repositoryClient.send<Bid[]>(
+      this.bidsQueueClient.send<Bid[]>(
         { cmd: 'get_bids_by_tag' },
         { tags: buyer.tags },
       ),
@@ -34,7 +33,6 @@ export class AppService {
     ).catch((err) => {
       console.log(err);
     });
-
     // devolver el comprador creado y las subastas que le interesen
     return { buyer: buyerCreated, bids };
   }
@@ -42,13 +40,12 @@ export class AppService {
   async createBid(bid: Omit<Bid, 'offers' | 'id'>) {
     // comunicación con servicio repositorio para crear subasta
     const bidCreated = await lastValueFrom(
-      this.repositoryClient
+      this.bidsQueueClient
         .send<Bid>({ cmd: 'create_bid' }, { bid: { ...bid, offers: [] } })
         .pipe(timeout(1000)),
     ).catch((err) => {
       console.log(err);
     });
-
     // devuelve la subasta creada
     return bidCreated;
   }
@@ -56,13 +53,12 @@ export class AppService {
   async cancelBid(id: string) {
     // comunicación con servicio repositorio para cancelar subasta
     const bidCanceled = await lastValueFrom(
-      this.repositoryClient
+      this.bidsQueueClient
         .send<Bid>({ cmd: 'cancel_bid' }, { id })
         .pipe(timeout(1000)),
     ).catch((err) => {
       console.log(err);
     });
-
     // devuelve la subasta cancelada
     return { bid: bidCanceled };
   }
@@ -70,15 +66,14 @@ export class AppService {
   async registerOffer(bidId: string, offer: Offer) {
     // actualizar subasta con oferta
     const bidUpdated = await lastValueFrom(
-      this.repositoryClient.send<Bid>(
+      this.bidsQueueClient.send<Bid>(
         { cmd: 'register_offer' },
         { id: bidId, offer },
       ),
     ).catch((err) => {
       console.log(err);
     });
-
-    // devolver la subasta actualizada con la nueva oferta
+    // // devolver la subasta actualizada con la nueva oferta
     return { bid: bidUpdated };
   }
 
@@ -95,23 +90,9 @@ export class AppService {
     return await pingRepository.data;
   }
 
-  async getQueueHealth(): Promise<string> {
-    const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`${process.env.QUEUE_URL}`),
-    );
-    return await pingRepository.data;
-  }
-
   async getRepositoryHealth(): Promise<string> {
     const pingRepository = await lastValueFrom(
       this.httpService.get<string>(`${process.env.REPOSITORY_URL}`),
-    );
-    return await pingRepository.data;
-  }
-
-  async getSubscriberHealth(): Promise<string> {
-    const pingRepository = await lastValueFrom(
-      this.httpService.get<string>(`${process.env.SUBSCRIBER_URL}`),
     );
     return await pingRepository.data;
   }

@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Bid, BidState, Buyer, Offer } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class RepositoryService {
   bids: Bid[] = [];
   buyers: Buyer[] = [];
+
+  constructor(
+    @Inject('EVENT_QUEUE_SERVICE')
+    private readonly eventQueueClient: ClientProxy,
+  ) {}
 
   getHello(): string {
     return 'Hello World from Repository Service!';
@@ -29,7 +35,9 @@ export class RepositoryService {
   async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
     const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
     await this.bids.push(newBid);
-    console.log(newBid);
+
+    this.eventQueueClient.emit('publish-notification', newBid.id);
+
     return { bid: newBid };
   }
 
@@ -40,6 +48,9 @@ export class RepositoryService {
       }
       return bid;
     });
+
+    this.eventQueueClient.emit('close-notification', id);
+
     return await this.getBid(id);
   }
 
@@ -48,6 +59,9 @@ export class RepositoryService {
     if (bid) {
       bid.offers.push(offer);
     }
+
+    this.eventQueueClient.emit('offer-notification', bid.id);
+
     return bid;
   }
 }
