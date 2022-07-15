@@ -6,6 +6,7 @@ spec:
   selector:
     matchLabels:
       component: bids
+  replicas: 1
   template:
     metadata:
       labels:
@@ -25,3 +26,8 @@ spec:
               value: repository-cluster-ip-service:3000
             - name: RABBITMQ_URL
               value: rabbitmq:5672
+          resources:
+            limits:
+              cpu: 500m
+            requests:
+              cpu: 200m
