@@ -3,20 +3,31 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { AppService } from './app.service';
 import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from './dto';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    @Inject('BIDS_QUEUE_SERVICE') private readonly bidsQueueClient: ClientProxy,
+  ) {}
 
   @Get('/health')
   bidsHealth(): string {
     return this.appService.getHello();
+  }
+
+  @Get('/message/:id')
+  sendMessage(@Param('id') message: string) {
+    this.bidsQueueClient.emit('event', message);
   }
 
   @Post('/buyers')
@@ -46,16 +57,6 @@ export class AppController {
   @Get('/event-health')
   async getEventHello(): Promise<string> {
     return await this.appService.getEventHealth();
-  }
-
-  @Get('/subscriber-health')
-  async getSubscriberHello(): Promise<string> {
-    return await this.appService.getSubscriberHealth();
-  }
-
-  @Get('/queue-health')
-  async getQueueHello(): Promise<string> {
-    return await this.appService.getQueueHealth();
   }
 
   @Get('/repository-health')

@@ -1,4 +1,5 @@
 import { Controller, Delete, Get, Patch, Post } from '@nestjs/common';
+import { EventPattern } from '@nestjs/microservices';
 import { EventService } from './event.service';
 
 @Controller()
@@ -10,18 +11,21 @@ export class EventController {
     return this.eventService.getHello();
   }
 
-  @Post()
-  postEvent(): string {
+  @EventPattern('publish-notification')
+  postEvent(data: string): string {
+    console.log(`Bid ${data} has been recently published`);
     return 'POST Event';
   }
 
-  @Patch()
-  patchEvent(): string {
+  @EventPattern('close-notification')
+  patchEvent(data: string): string {
+    console.log(`Bid ${data} has been closed`);
     return 'PATCH EVENT';
   }
 
-  @Delete()
-  deleteEvent(): string {
+  @EventPattern('offer-notification')
+  deleteEvent(data: string): string {
+    console.log(`A new offer has been placed for Bid: ${data}`);
     return 'DELETE event';
   }
 }

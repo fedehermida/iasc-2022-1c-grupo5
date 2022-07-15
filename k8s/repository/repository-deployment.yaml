@@ -19,3 +19,5 @@ spec:
           env:
             - name: SERVICE
               value: repository
+            - name: RABBITMQ_URL
+              value: rabbitmq:5672
