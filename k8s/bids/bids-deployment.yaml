@@ -28,6 +28,6 @@ spec:
               value: rabbitmq:5672
           resources:
             limits:
-              cpu: 500m
+              cpu: 0.5
             requests:
-              cpu: 200m
+              cpu: 0.5
