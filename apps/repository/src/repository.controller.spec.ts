@@ -16,7 +16,9 @@ describe('RepositoryController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(repositoryController.getHello()).toBe('Hello World!');
+      expect(repositoryController.getHello()).toBe(
+        'Hello World from Repository Service!',
+      );
     });
   });
 });

@@ -1,0 +1,30 @@
+export type Buyer = {
+  name: string;
+  ip: string;
+  tags: string[];
+};
+
+export type Bid = {
+  id: string;
+  tags: string[];
+  basePrice: number;
+  duration: number;
+  item: {
+    title: string;
+    description: string;
+    image?: string;
+  };
+  offers: Offer[];
+  state: BidState;
+};
+
+export enum BidState {
+  OPEN = 'open',
+  ENDED = 'ended',
+  CANCELED = 'cancled',
+}
+
+export type Offer = {
+  ip: string;
+  price: number;
+};
