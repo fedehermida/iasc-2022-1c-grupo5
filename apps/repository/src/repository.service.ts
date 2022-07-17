@@ -35,9 +35,9 @@ export class RepositoryService {
   async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
     const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
     await this.bids.push(newBid);
-
-    this.eventQueueClient.emit('publish-notification', newBid.id);
-
+    var buyers = await this.buyers.filter(buyer => newBid["tags"].filter(bid=>buyer["tags"].includes(bid)).length>0)
+    var ips = await buyers.map(buyer =>  buyer["ip"])
+    this.eventQueueClient.emit('publish-notification', {"bid":{"id": newBid.id,"basePrice": newBid.basePrice, "duration":newBid.duration, "item": newBid.item}, "ip":ips});
     return { bid: newBid };
   }
 
@@ -48,8 +48,9 @@ export class RepositoryService {
       }
       return bid;
     });
-
-    this.eventQueueClient.emit('close-notification', id);
+    var bid= this.bids.filter(bid => bid["id"] == id)[0]
+    var offer_ip = await bid["offers"].map(offer => offer["ip"])
+    this.eventQueueClient.emit('close-notification', {"bid": id, ip: offer_ip});
 
     return await this.getBid(id);
   }
@@ -59,8 +60,8 @@ export class RepositoryService {
     if (bid) {
       bid.offers.push(offer);
     }
-
-    this.eventQueueClient.emit('offer-notification', bid.id);
+    var offer_ip = await bid["offers"].map(offer => offer["ip"])
+    this.eventQueueClient.emit('offer-notification', {"bid": {"id":bid.id, "offer": offer}, ip:offer_ip});
 
     return bid;
   }
