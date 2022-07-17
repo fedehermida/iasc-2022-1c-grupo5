@@ -1,0 +1,38 @@
+config:
+  target: "http://localhost"
+  processor: "./post-body.js"
+  phases:
+    - duration: 60
+      arrivalRate: 15
+      name: 15/60
+  environments:
+    prod:
+      target: "http://localhost"
+      phases:
+        - duration: 120
+          arrivalRate: 10
+    stage:
+      target: "http://localhost:3000"
+      phases:
+        - duration: 120
+          arrivalRate: 10
+scenarios:
+  - name: "POST /bids/buyers && /bids/bids"
+    flow:
+    - function: "genPayloads"
+    - post:
+        url: "/bids/buyers"
+        json:
+          "{{ buyerPayload }}"
+        expect:
+          - statusCode: 201
+    - post:
+        url: "/bids/bids"
+        json:
+          "{{ bidPayload }}"
+        expect:
+          - statusCode: 201
+  - name: "GET /health"
+    flow:
+    - get:
+        url: "/health"

@@ -21,7 +21,7 @@ export type Bid = {
 export enum BidState {
   OPEN = 'open',
   ENDED = 'ended',
-  CANCELED = 'cancled',
+  CANCELED = 'canceled',
 }
 
 export type Offer = {

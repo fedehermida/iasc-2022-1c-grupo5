@@ -1,0 +1,12 @@
+{
+  "duration": 3000,
+  "basePrice": 4020,
+  "tags": ["auto", "chevrolet"],
+  "item": {
+    "title": "Ford Ka 1.5 2021",
+    "description": "Ford Ka 4 Ptas Automático. En garantía hasta 2025"
+  },
+  "state": "opened",
+  "offers": [],
+  "id": "c516f630-5f3c-4462-841a-eec2580be0ad"
+}
