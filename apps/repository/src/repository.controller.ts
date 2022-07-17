@@ -1,21 +1,34 @@
-import { Controller, Get, Inject } from '@nestjs/common';
-import {
-  ClientProxy,
-  EventPattern,
-  MessagePattern,
-  Payload,
-} from '@nestjs/microservices';
+import { Controller, Get, Param } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RepositoryService } from './repository.service';
 
 @Controller()
 export class RepositoryController {
   constructor(private readonly repositoryService: RepositoryService) {}
 
-  @Get()
-  getHello() {
-    const { bids, buyers } = this.repositoryService;
-    return { bids, buyers };
+  @Get('/bids/:id')
+  async getBid(@Param('id') id: string) {
+    return await this.repositoryService.findBidById(id);
   }
+
+  @Get('/bids')
+  async getBids() {
+    return await this.repositoryService.findAllBids();
+  }
+
+  @Get('/reset')
+  async reset() {
+    this.repositoryService.bids = [];
+    this.repositoryService.buyers = [];
+    return;
+  }
+
+  @Get('/buyers')
+  async getBuyers() {
+    return await this.repositoryService.findAllBuyers();
+  }
+
+  /* Mensajes que recibe desde "bids service" */
 
   @MessagePattern({ cmd: 'create_buyer' })
   async createBuyer(dto) {
@@ -24,7 +37,12 @@ export class RepositoryController {
 
   @MessagePattern({ cmd: 'get_bids_by_tag' })
   async getBidsByTag(@Payload() dto) {
-    return await this.repositoryService.getBidsByTags(dto.tags);
+    return await this.repositoryService.findOpenBidsForTags(dto.tags);
+  }
+
+  @MessagePattern({ cmd: 'get_current_price' })
+  async getCurrentBidPrice(@Payload() dto) {
+    return await this.repositoryService.getCurrentBidPrice(dto.id);
   }
 
   @MessagePattern({ cmd: 'create_bid' })
@@ -37,21 +55,13 @@ export class RepositoryController {
     return await this.repositoryService.cancelBid(dto.id);
   }
 
+  @MessagePattern({ cmd: 'end_bid' })
+  async endBid(@Payload() dto) {
+    return await this.repositoryService.endBid(dto.id);
+  }
+
   @MessagePattern({ cmd: 'register_offer' })
   async registerOffer(@Payload() dto) {
     return await this.repositoryService.registerOffer(dto.id, dto.offer);
-  }
-
-  @EventPattern('event')
-  async hello(data: string) {
-    console.log(`Data from bids service: ${data}`);
-    // const EVENT_NOTIFIER = [
-    //   'publish-notification',
-    //   'close-notification',
-    //   'offer-notification',
-    // ];
-    // const randomEvent = get_random(EVENT_NOTIFIER);
-    // this.eventQueueClient.emit(randomEvent, data);
-    return;
   }
 }

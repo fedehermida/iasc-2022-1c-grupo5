@@ -2,6 +2,7 @@ import { IsNumber, IsPositive } from '@nestjs/class-validator';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsDate,
   IsDefined, IsNotEmpty,
   IsOptional,
   IsString,

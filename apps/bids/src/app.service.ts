@@ -45,8 +45,15 @@ export class AppService {
     ).catch((err) => {
       console.log(err);
     });
-    // devuelve la subasta creada
-    return bidCreated;
+
+    if (bidCreated) {
+      // timeout para terminar la subasta
+      setTimeout(() => {
+        this.endBid(bidCreated.id);
+      }, bid.duration);
+      // devuelve la subasta creada
+      return { bid: bidCreated };
+    }
   }
 
   async cancelBid(id: string) {
@@ -62,18 +69,45 @@ export class AppService {
     return { bid: bidCanceled };
   }
 
-  async registerOffer(bidId: string, offer: Offer) {
-    // actualizar subasta con oferta
-    const bidUpdated = await lastValueFrom(
-      this.bidsQueueClient.send<Bid>(
-        { cmd: 'register_offer' },
-        { id: bidId, offer },
+  async endBid(id: string) {
+    // comunicación con servicio repositorio para finalizar subasta
+    const bidEnded = await lastValueFrom(
+      this.bidsQueueClient.send<{ bid: Bid; winner?: Buyer }>(
+        { cmd: 'end_bid' },
+        { id },
       ),
     ).catch((err) => {
       console.log(err);
     });
-    // // devolver la subasta actualizada con la nueva oferta
-    return { bid: bidUpdated };
+    // devuelve la subasta finalizada
+    return bidEnded;
+  }
+
+  async registerOffer(bidId: string, offer: Offer) {
+    const currentPrice = await lastValueFrom(
+      this.bidsQueueClient.send<number>(
+        { cmd: 'get_current_price' },
+        { id: bidId },
+      ),
+    );
+    if (offer.price > currentPrice) {
+      // actualizar subasta con oferta
+      const bidUpdated = await lastValueFrom(
+        this.bidsQueueClient.send<Bid>(
+          { cmd: 'register_offer' },
+          { id: bidId, offer },
+        ),
+      ).catch((err) => {
+        console.log(err);
+      });
+
+      // devolver la subasta actualizada con la nueva oferta
+      if (bidUpdated) {
+        return { bid: bidUpdated };
+      }
+    } else {
+      // 'El precio de la oferta no es mayor que el actual'
+    }
   }
 
   /* HEALTH */

@@ -1,4 +1,9 @@
-import { BidState, CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
+import {
+  BidState,
+  CreateBidDto,
+  CreateBuyerDto,
+  CreateOfferDto,
+} from '@iasc/types';
 import {
   Body,
   Controller,
@@ -6,7 +11,7 @@ import {
   Get,
   Param,
   Post,
-  Put
+  Put,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -35,7 +40,10 @@ export class AppController {
   @Put('/bids/:id')
   async registerOffer(@Param('id') id: string, @Body() offer: CreateOfferDto) {
     console.log(`PUT /bids/${id}`);
-    return await this.appService.registerOffer(id, offer);
+    return await this.appService.registerOffer(id, {
+      ...offer,
+      timestamp: new Date().getTime(),
+    });
   }
 
   /* HEALTH */

@@ -11,21 +11,23 @@ export class EventController {
     return this.eventService.getHello();
   }
 
-  @EventPattern('publish-notification')
-  postEvent(data: string): string {
+  @EventPattern('bid-created')
+  async bidCreated(data: string) {
     console.log(`Bid ${data} has been recently published`);
-    return 'POST Event';
   }
 
-  @EventPattern('close-notification')
-  patchEvent(data: string): string {
+  @EventPattern('bid-ended')
+  async bidEnded(data: string) {
+    console.log(`Bid ${data} has ended`);
+  }
+
+  @EventPattern('bid-closed')
+  async bidClosed(data: string) {
     console.log(`Bid ${data} has been closed`);
-    return 'PATCH EVENT';
   }
 
-  @EventPattern('offer-notification')
-  deleteEvent(data: string): string {
-    console.log(`A new offer has been placed for Bid: ${data}`);
-    return 'DELETE event';
+  @EventPattern('offer-placed')
+  async offerPlaced(data: string) {
+    console.log(`Bid ${data} has a new offer`);
   }
 }
