@@ -119,18 +119,15 @@ export class RaftNodeService {
   async beginHeartbeat() {
     // initial entry
     Object.keys(this.votes).forEach((nodeId) => {
-      this.redisService.send<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
-        RPC_TYPE.APPEND_ENTRIES,
-        {
-          type: RPC_TYPE.APPEND_ENTRIES,
-          term: this.currentTerm,
-          leaderId: this.id,
-          prevLogIndex: -1,
-          prevLogTerm: -1,
-          entries: [],
-          leaderCommit: this.commitIndex,
-        },
-      );
+      this.send(nodeId, RPC_TYPE.APPEND_ENTRIES, {
+        type: RPC_TYPE.APPEND_ENTRIES,
+        term: this.currentTerm,
+        leaderId: this.id,
+        prevLogIndex: -1,
+        prevLogTerm: -1,
+        entries: [],
+        leaderCommit: this.commitIndex,
+      });
     });
 
     clearInterval(this.heartbeatInterval);
