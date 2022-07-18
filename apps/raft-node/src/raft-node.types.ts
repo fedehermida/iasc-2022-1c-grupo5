@@ -18,6 +18,8 @@ export enum RPC_TYPE {
 export type VoteRequest = {
   term: number;
   candidateId: string;
+  lastLogIndex: number;
+  lastLogTerm: number;
 };
 
 export type VoteReply = {
@@ -26,3 +28,22 @@ export type VoteReply = {
   nodeId: string;
   votedFor: string;
 };
+
+export type LogEntry = {
+  term: number
+};
+
+export type AppendEntriesRequest = {
+  nodeId: string;
+  term: number;
+  leaderId: string;
+  prevLogIndex: number;
+  prevLogTerm: number;
+  entries: LogEntry[];
+  leaderCommit: number;
+};
+
+export type AppendEntriesReply = {
+  term: number;
+  success: boolean;
+}
