@@ -20,17 +20,29 @@ export class RaftNodeService {
   state: NodeState;
   clusterSize: number;
   electionTimeoutMs: number;
-  heartbeatTimeoutMs: number;
+  heartbeatIntervalMs: number;
   currentTerm: number;
   votedFor: string | null;
   leader: string | null;
 
   electionTimeout: NodeJS.Timeout;
-  heartbeatTime: NodeJS.Timer;
+  heartbeatInterval: NodeJS.Timer;
 
+  // volatile state on LEADERS
+  nextIndex = {};
+  matchIndex = {};
+
+  // volatile state on CANDIDATES
   votes = {};
 
   log = [];
+
+  commitIndex: number;
+  lastApplied: number;
+
+  private randomElectionTimeout() {
+    return randomInt(300, 500);
+  }
 
   constructor(
     @Inject('RAFT_SERVICE') private readonly redisService: ClientProxy,
@@ -39,10 +51,13 @@ export class RaftNodeService {
     this.state = NodeState.FOLLOWER;
     this.electionTimeoutMs = randomInt(300, 500);
     this.clusterSize = 3;
-    this.heartbeatTimeoutMs = 50;
-    this.currentTerm = 1;
+    this.heartbeatIntervalMs = 50;
+    this.currentTerm = 0;
     this.votedFor = null;
     this.leader = null;
+
+    this.commitIndex = -1;
+    this.lastApplied = -1;
 
     console.log(`${this.id} starting`);
     console.log(
@@ -51,6 +66,66 @@ export class RaftNodeService {
 
     this.startElectionTimeout();
   }
+
+  async beginHeartbeat() {
+    // initial entry
+    Object.keys(this.votes).forEach((nodeId) => {
+      this.redisService.send<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
+        RPC_TYPE.APPEND_ENTRIES,
+        {
+          term: this.currentTerm,
+          leaderId: this.id,
+          prevLogIndex: -1,
+          prevLogTerm: -1,
+          entries: [],
+          leaderCommit: this.commitIndex,
+          nodeId,
+        },
+      );
+    });
+
+    clearInterval(this.heartbeatInterval);
+
+    this.heartbeatInterval = setInterval(() => {
+      Object.keys(this.votes).forEach((nodeId) => {
+        let entries = [];
+        let prevLogIndex = -1;
+        let prevLogTerm = -1;
+
+        const logLength = this.log.length;
+
+        if (this.nextIndex[nodeId] == null) {
+          this.nextIndex[nodeId] = logLength;
+        }
+
+        for (let i = this.nextIndex[nodeId]; i < logLength; i++) {
+          entries.push({ index: 1, ...this.log[i] });
+        }
+
+        if (entries.length > 0) {
+          prevLogIndex = entries[0].index - 1;
+          if (prevLogIndex > -1) {
+            prevLogTerm = this.log[prevLogIndex].term;
+          }
+        }
+
+        this.redisService.send<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
+          RPC_TYPE.APPEND_ENTRIES,
+          {
+            term: this.currentTerm,
+            leaderId: this.id,
+            prevLogIndex,
+            prevLogTerm,
+            entries,
+            leaderCommit: this.commitIndex,
+            nodeId,
+          },
+        );
+      });
+    }, this.heartbeatIntervalMs);
+  }
+
+  /* * */
 
   async beginElection() {
     // Para empezar una eleccion incrementa el term
@@ -93,71 +168,83 @@ export class RaftNodeService {
     // );
   }
 
-  async handleVoteRequest({ candidateId, term }: VoteRequest) {
+  async handleVoteRequest({
+    candidateId,
+    term,
+    lastLogTerm: candidateLastLogTerm,
+    lastLogIndex: candidateLastLogIndex,
+  }: VoteRequest) {
     this.checkTerm(term);
+    this.resetElectionTimeout();
 
-    if (candidateId === this.id) {
-      // recibe el pedido de voto de si mismo nodo
-      return;
-    }
-
-    if (term < this.currentTerm) {
-      // recibe el pedido de voto de un nodo con un term menor
-      return;
-    }
-
-    // el nodo no votó o votó por quien le está pidiendo un voto
-    // falta chequear el estado del log
-    if (this.votedFor === null || this.votedFor === candidateId) {
-      this.votedFor = candidateId;
-      this.redisService.emit(RPC_TYPE.REQUEST_VOTE_REPLY, {
-        nodeId: this.id,
-        term,
-        voteGranted: true,
-        votedFor: candidateId,
-      });
-    }
-
-    this.clearElectionTimeout();
     console.log(`${this.id} received vote request from ${candidateId}`);
+
+    if (term >= this.currentTerm) {
+      let lastLogEntry = this.log[this.log.length - 1];
+      let lastLogTerm = lastLogEntry ? lastLogEntry.term : -1;
+      let candidateIsUpToDate =
+        candidateLastLogTerm > lastLogTerm ||
+        (candidateLastLogTerm === lastLogTerm &&
+          candidateLastLogIndex >= this.log.length - 1);
+
+      if (
+        (this.votedFor === null || this.votedFor === candidateId) &&
+        candidateIsUpToDate
+      ) {
+        this.votedFor = candidateId;
+        this.redisService.send<RPC_TYPE.REQUEST_VOTE_REPLY, VoteReply>(
+          RPC_TYPE.REQUEST_VOTE_REPLY,
+          {
+            term: this.currentTerm,
+            voteGranted: true,
+            votedFor: candidateId,
+            nodeId: this.id,
+          },
+        );
+      }
+    } else {
+      this.redisService.send<RPC_TYPE.REQUEST_VOTE_REPLY, VoteReply>(
+        RPC_TYPE.REQUEST_VOTE_REPLY,
+        {
+          term: this.currentTerm,
+          voteGranted: false,
+          nodeId: this.id,
+          votedFor: '',
+        },
+      );
+    }
   }
 
   async handleVoteReply({ term, voteGranted, nodeId, votedFor }: VoteReply) {
     if (votedFor === this.id) {
-      if (term < this.currentTerm) {
-        return;
-      }
-
-      if (voteGranted) {
-        console.log(`${this.id} received vote from ${nodeId}`);
+      if (term === this.currentTerm && voteGranted) {
         this.votes[nodeId] = true;
         if (this.state === NodeState.CANDIDATE && this.hasMajority()) {
           this.state = NodeState.LEADER;
-          this.leader = this.id;
+          this.nextIndex = {};
+          this.matchIndex = {};
+          this.beginHeartbeat();
           console.log(`${this.id} is now leader`);
-          this.clearElectionTimeout();
-          this.startHeartbeat();
-          // this.sendAppendEntries();
+          // emit leader elected
         }
-      } else {
-        console.log(`${this.id} received vote rejection from ${nodeId}`);
       }
     }
-  }
-
-  startHeartbeat() {
-    this.heartbeatTime = setInterval(() => {
-      this.sendHeartbeat();
-    }, 100);
   }
 
   async handleAppendEntriesRequest({
     term,
     nodeId,
     entries,
+    leaderId,
   }: AppendEntriesRequest) {
-    if (nodeId === this.id) {
+    this.resetElectionTimeout();
+    if (nodeId !== this.id) {
       return;
+    }
+
+    if (term >= this.currentTerm && this.state !== NodeState.LEADER) {
+      this.state = NodeState.FOLLOWER;
+      this.leader = leaderId;
     }
 
     if (entries.length === 0) {
@@ -167,47 +254,25 @@ export class RaftNodeService {
       console.log(`${this.id} received append entries request`);
     }
     this.checkTerm(term);
-
-    // §5.1
-    if (term < this.currentTerm) {
-      return;
-    }
-
-    this.resetElectionTimeout();
     // chequear §5.3
   }
 
   // async handleAppendEntriesReply({ term }: AppendEntriesReply) {}
 
-  async sendHeartbeat() {
-    console.log(`${this.id} sending heartbeat`);
-    this.redisService.emit<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
-      RPC_TYPE.APPEND_ENTRIES,
-      {
-        nodeId: this.id,
-        term: this.currentTerm,
-        leaderId: this.leader,
-        prevLogIndex: 0,
-        prevLogTerm: 0,
-        entries: [],
-        leaderCommit: 0,
-      },
-    );
-  }
-
   checkTerm(term: number) {
     if (term > this.currentTerm) {
       this.currentTerm = term;
+      this.leader = null;
       this.votedFor = null;
-      this.votes = {};
       this.state = NodeState.FOLLOWER;
-      // falta decir a que lider sigue?
+      this.votes = {};
+      clearInterval(this.heartbeatInterval);
     }
   }
 
   hasMajority() {
     const votes = Object.keys(this.votes).length;
-    return votes > this.clusterSize / 2;
+    return votes > Math.ceil(this.clusterSize / 2);
   }
 
   startElectionTimeout() {

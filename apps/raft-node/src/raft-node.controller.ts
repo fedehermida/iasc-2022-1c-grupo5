@@ -1,6 +1,11 @@
 import { Controller } from '@nestjs/common';
 
-import { EventPattern, Payload } from '@nestjs/microservices';
+import {
+  Ctx,
+  EventPattern,
+  Payload,
+  RedisContext,
+} from '@nestjs/microservices';
 import { RaftNodeService } from './raft-node.service';
 import {
   AppendEntriesRequest,
@@ -23,7 +28,11 @@ export class RaftNodeController {
   }
 
   @EventPattern(RPC_TYPE.APPEND_ENTRIES)
-  handleAppendEntries(@Payload() data: AppendEntriesRequest) {
+  handleAppendEntries(
+    @Payload() data: AppendEntriesRequest,
+    @Ctx() context: RedisContext,
+  ) {
+    console.log(context.getChannel());
     this.raftNodeService.handleAppendEntriesRequest(data);
   }
 }
