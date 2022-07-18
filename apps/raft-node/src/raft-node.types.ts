@@ -1,3 +1,7 @@
+export type LogEntry = {
+  term: number;
+};
+
 export enum NodeState {
   CANDIDATE = 'CANDIDATE',
   LEADER = 'LEADER',
@@ -9,13 +13,14 @@ export enum RPC_TYPE {
   REQUEST_VOTE_REPLY = 'REQUEST_VOTE_REPLY',
   APPEND_ENTRIES = 'APPEND_ENTRIES',
   APPEND_ENTRIES_REPLY = 'APPEND_ENTRIES_REPLY',
-  APPEND_ENTRY = 'APPEND_ENTRY',
-  DISPATCH = 'DISPATCH',
-  DISPATCH_SUCCESS = 'DISPATCH_SUCCESS',
-  DISPATCH_ERROR = 'DISPATCH_ERROR',
+  // APPEND_ENTRY = 'APPEND_ENTRY',
+  // DISPATCH = 'DISPATCH',
+  // DISPATCH_SUCCESS = 'DISPATCH_SUCCESS',
+  // DISPATCH_ERROR = 'DISPATCH_ERROR',
 }
 
 export type VoteRequest = {
+  type: RPC_TYPE.REQUEST_VOTE;
   term: number;
   candidateId: string;
   lastLogIndex: number;
@@ -23,18 +28,13 @@ export type VoteRequest = {
 };
 
 export type VoteReply = {
+  type: RPC_TYPE.REQUEST_VOTE_REPLY;
   term: number;
   voteGranted: boolean;
-  nodeId: string;
-  votedFor: string;
-};
-
-export type LogEntry = {
-  term: number
 };
 
 export type AppendEntriesRequest = {
-  nodeId: string;
+  type: RPC_TYPE.APPEND_ENTRIES;
   term: number;
   leaderId: string;
   prevLogIndex: number;
@@ -44,6 +44,19 @@ export type AppendEntriesRequest = {
 };
 
 export type AppendEntriesReply = {
+  type: RPC_TYPE.APPEND_ENTRIES_REPLY;
   term: number;
   success: boolean;
-}
+};
+
+export type PayloadType =
+  | VoteRequest
+  | VoteReply
+  | AppendEntriesRequest
+  | AppendEntriesReply;
+
+export type Message = {
+  payload: PayloadType;
+  from: string;
+  to?: string;
+};

@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { v4 as uuidv4 } from 'uuid';
+import { Raft } from './constants';
 import {
-  AppendEntriesReply,
   AppendEntriesRequest,
+  Message,
   NodeState,
+  PayloadType,
   RPC_TYPE,
   VoteReply,
   VoteRequest,
@@ -16,10 +18,9 @@ const randomInt = (min: number, max: number) => {
 
 @Injectable()
 export class RaftNodeService {
-  id: string;
+  private id: Readonly<string> = Object.freeze(`node-${uuidv4()}`);
   state: NodeState;
   clusterSize: number;
-  electionTimeoutMs: number;
   heartbeatIntervalMs: number;
   currentTerm: number;
   votedFor: string | null;
@@ -41,17 +42,15 @@ export class RaftNodeService {
   lastApplied: number;
 
   private randomElectionTimeout() {
-    return randomInt(300, 500);
+    return randomInt(Raft.ELECTION_TIMEOUT_MIN, Raft.ELECTION_TIMEOUT_MAX);
   }
 
   constructor(
     @Inject('RAFT_SERVICE') private readonly redisService: ClientProxy,
   ) {
-    this.id = `node-${uuidv4()}`;
     this.state = NodeState.FOLLOWER;
-    this.electionTimeoutMs = randomInt(300, 500);
-    this.clusterSize = 3;
-    this.heartbeatIntervalMs = 50;
+    this.clusterSize = Raft.CLUSTER_SIZE;
+    this.heartbeatIntervalMs = Raft.HEARTBEAT_INTERVAL;
     this.currentTerm = 0;
     this.votedFor = null;
     this.leader = null;
@@ -60,12 +59,62 @@ export class RaftNodeService {
     this.lastApplied = -1;
 
     console.log(`${this.id} starting`);
-    console.log(
-      `${this.id} first election timeout: ${this.electionTimeoutMs}ms`,
-    );
 
-    this.startElectionTimeout();
+    this.resetElectionTimeout();
   }
+
+  /* * */
+  private send<T extends RPC_TYPE, U extends PayloadType>(
+    to: string,
+    type: T,
+    payload: U,
+  ) {
+    this.redisService.emit<T, Message>(type, {
+      from: this.id,
+      to,
+      payload,
+    });
+  }
+
+  private broadcast<T extends RPC_TYPE, U extends PayloadType>(
+    type: T,
+    payload: U,
+  ) {
+    this.redisService.emit<T, Message>(type, {
+      from: this.id,
+      payload,
+    });
+  }
+
+  async handleMessage(message: Message) {
+    if (message.to === undefined || message.to === this.id) {
+      this.resetElectionTimeout();
+
+      // Check term
+      if (message.payload.term > this.currentTerm) {
+        this.currentTerm = message.payload.term;
+        this.leader = null;
+        this.votedFor = null;
+        this.state = NodeState.FOLLOWER;
+        this.votes = {};
+        clearInterval(this.heartbeatInterval);
+      }
+
+      // Handle message
+      switch (message.payload.type) {
+        case RPC_TYPE.REQUEST_VOTE:
+          this.handleVoteRequest(message.payload);
+          break;
+        case RPC_TYPE.REQUEST_VOTE_REPLY:
+          this.handleVoteReply(message.payload, message.from);
+          break;
+        case RPC_TYPE.APPEND_ENTRIES:
+          this.handleAppendEntriesRequest(message.payload, message.from);
+          break;
+      }
+    }
+  }
+  /* * */
 
   async beginHeartbeat() {
     // initial entry
@@ -73,13 +122,13 @@ export class RaftNodeService {
       this.redisService.send<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
         RPC_TYPE.APPEND_ENTRIES,
         {
+          type: RPC_TYPE.APPEND_ENTRIES,
           term: this.currentTerm,
           leaderId: this.id,
           prevLogIndex: -1,
           prevLogTerm: -1,
           entries: [],
           leaderCommit: this.commitIndex,
-          nodeId,
         },
       );
     });
@@ -109,64 +158,20 @@ export class RaftNodeService {
           }
         }
 
-        this.redisService.send<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
-          RPC_TYPE.APPEND_ENTRIES,
-          {
-            term: this.currentTerm,
-            leaderId: this.id,
-            prevLogIndex,
-            prevLogTerm,
-            entries,
-            leaderCommit: this.commitIndex,
-            nodeId,
-          },
-        );
+        this.send(nodeId, RPC_TYPE.APPEND_ENTRIES, {
+          type: RPC_TYPE.APPEND_ENTRIES,
+          term: this.currentTerm,
+          leaderId: this.id,
+          prevLogIndex,
+          prevLogTerm,
+          entries,
+          leaderCommit: this.commitIndex,
+        });
       });
     }, this.heartbeatIntervalMs);
   }
 
   /* * */
-
-  async beginElection() {
-    // Para empezar una eleccion incrementa el term
-    // pasa a estado candidato y solicita votos
-    this.state = NodeState.CANDIDATE;
-    this.leader = null;
-    this.votedFor = this.id;
-    this.votes = {};
-    this.currentTerm += 1;
-    this.requestVote();
-  }
-
-  async requestVote() {
-    console.log(`${this.id} requesting vote`);
-    this.redisService.emit<RPC_TYPE.REQUEST_VOTE, VoteRequest>(
-      RPC_TYPE.REQUEST_VOTE,
-      {
-        candidateId: this.id,
-        term: this.currentTerm,
-        lastLogIndex: 0, // no deberían ser siempre 0
-        lastLogTerm: 0, // no deberían ser siempre 0
-      },
-    );
-    this.startElectionTimeout();
-  }
-
-  async sendAppendEntries() {
-    // console.log(`${this.id} sending append entries`);
-    // this.redisService.emit<RPC_TYPE.APPEND_ENTRIES, AppendEntriesRequest>(
-    //   RPC_TYPE.APPEND_ENTRIES,
-    //   {
-    //     nodeId: this.id,
-    //     term: this.currentTerm,
-    //     leaderId: this.leader,
-    //     prevLogIndex: 0,
-    //     prevLogTerm: 0,
-    //     entries: [],
-    //     leaderCommit: 0,
-    //   },
-    // );
-  }
 
   async handleVoteRequest({
     candidateId,
@@ -174,9 +179,6 @@ export class RaftNodeService {
     lastLogTerm: candidateLastLogTerm,
     lastLogIndex: candidateLastLogIndex,
   }: VoteRequest) {
-    this.checkTerm(term);
-    this.resetElectionTimeout();
-
     console.log(`${this.id} received vote request from ${candidateId}`);
 
     if (term >= this.currentTerm) {
@@ -192,56 +194,68 @@ export class RaftNodeService {
         candidateIsUpToDate
       ) {
         this.votedFor = candidateId;
-        this.redisService.send<RPC_TYPE.REQUEST_VOTE_REPLY, VoteReply>(
-          RPC_TYPE.REQUEST_VOTE_REPLY,
-          {
-            term: this.currentTerm,
-            voteGranted: true,
-            votedFor: candidateId,
-            nodeId: this.id,
-          },
-        );
+        this.send(candidateId, RPC_TYPE.REQUEST_VOTE_REPLY, {
+          type: RPC_TYPE.REQUEST_VOTE_REPLY,
+          term: this.currentTerm,
+          voteGranted: true,
+        });
+        console.log(`${this.id} voted for ${candidateId}`);
       }
     } else {
-      this.redisService.send<RPC_TYPE.REQUEST_VOTE_REPLY, VoteReply>(
-        RPC_TYPE.REQUEST_VOTE_REPLY,
-        {
-          term: this.currentTerm,
-          voteGranted: false,
-          nodeId: this.id,
-          votedFor: '',
-        },
-      );
+      this.send(candidateId, RPC_TYPE.REQUEST_VOTE_REPLY, {
+        type: RPC_TYPE.REQUEST_VOTE_REPLY,
+        term: this.currentTerm,
+        voteGranted: false,
+      });
+      console.log(`${this.id} rejected the vote request from ${candidateId}`);
     }
   }
 
-  async handleVoteReply({ term, voteGranted, nodeId, votedFor }: VoteReply) {
-    if (votedFor === this.id) {
-      if (term === this.currentTerm && voteGranted) {
-        this.votes[nodeId] = true;
-        if (this.state === NodeState.CANDIDATE && this.hasMajority()) {
-          this.state = NodeState.LEADER;
-          this.nextIndex = {};
-          this.matchIndex = {};
-          this.beginHeartbeat();
-          console.log(`${this.id} is now leader`);
-          // emit leader elected
-        }
+  /* * */
+
+  async beginElection() {
+    // Para empezar una eleccion incrementa el term
+    // pasa a estado candidato y solicita votos
+    this.state = NodeState.CANDIDATE;
+    this.leader = null;
+    this.votedFor = this.id;
+    this.votes = {};
+    this.currentTerm += 1;
+    this.requestVote();
+    // this.startElectionTimeout();
+  }
+
+  async requestVote() {
+    console.log(`${this.id} requesting vote`);
+    this.broadcast(RPC_TYPE.REQUEST_VOTE, {
+      type: RPC_TYPE.REQUEST_VOTE,
+      candidateId: this.id,
+      term: this.currentTerm,
+      lastLogIndex: 0, // no deberían ser siempre 0
+      lastLogTerm: 0, // no deberían ser siempre 0
+    });
+  }
+
+  async handleVoteReply({ term, voteGranted }: VoteReply, from: string) {
+    console.log(`${this.id} received vote reply from ${from}`);
+    if (term === this.currentTerm && voteGranted) {
+      this.votes[from] = true;
+      console.log(`${this.id} votes: ${JSON.stringify(this.votes, null, 2)}`);
+      if (this.state === NodeState.CANDIDATE && this.hasMajority()) {
+        this.state = NodeState.LEADER;
+        this.nextIndex = {};
+        this.matchIndex = {};
+        this.beginHeartbeat();
+        console.log(`${this.id} is now leader`);
+        // emit leader elected
       }
     }
   }
 
-  async handleAppendEntriesRequest({
-    term,
-    nodeId,
-    entries,
-    leaderId,
-  }: AppendEntriesRequest) {
-    this.resetElectionTimeout();
-    if (nodeId !== this.id) {
-      return;
-    }
-
+  async handleAppendEntriesRequest(
+    { term, entries, leaderId }: AppendEntriesRequest,
+    from: string,
+  ) {
     if (term >= this.currentTerm && this.state !== NodeState.LEADER) {
       this.state = NodeState.FOLLOWER;
       this.leader = leaderId;
@@ -249,45 +263,27 @@ export class RaftNodeService {
 
     if (entries.length === 0) {
       // is heartbeat
-      console.log(`${this.id} received heartbeat from ${nodeId}`);
+      // console.log(`${this.id} received heartbeat from ${from}`);
     } else {
       console.log(`${this.id} received append entries request`);
     }
-    this.checkTerm(term);
-    // chequear §5.3
   }
 
-  // async handleAppendEntriesReply({ term }: AppendEntriesReply) {}
-
-  checkTerm(term: number) {
-    if (term > this.currentTerm) {
-      this.currentTerm = term;
-      this.leader = null;
-      this.votedFor = null;
-      this.state = NodeState.FOLLOWER;
-      this.votes = {};
-      clearInterval(this.heartbeatInterval);
-    }
-  }
-
+  /* * */
   hasMajority() {
     const votes = Object.keys(this.votes).length;
     return votes > Math.ceil(this.clusterSize / 2);
   }
 
-  startElectionTimeout() {
-    this.electionTimeoutMs = randomInt(300, 500);
+  private resetElectionTimeout() {
+    const timeout = this.randomElectionTimeout();
+    if (this.electionTimeout !== null) {
+      clearTimeout(this.electionTimeout);
+    }
+
     this.electionTimeout = setTimeout(() => {
+      this.resetElectionTimeout();
       this.beginElection();
-    }, this.electionTimeoutMs);
-  }
-
-  clearElectionTimeout() {
-    clearTimeout(this.electionTimeout);
-  }
-
-  resetElectionTimeout() {
-    this.clearElectionTimeout();
-    this.startElectionTimeout();
+    }, timeout);
   }
 }
