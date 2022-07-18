@@ -1,5 +1,30 @@
-{
-  "name": "Guido",
-  "ip": "127.0.0.1",
-  "tags": ["auto"]
-}
+[
+  {
+    "name": "Guido",
+    "ip": "127.0.0.1",
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "name": "Fede",
+    "ip": "127.0.0.2",
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "name": "Juan",
+    "ip": "127.0.0.3",
+    "tags": [
+      "auto"
+    ]
+  },
+  {
+    "name": "Chiara",
+    "ip": "127.0.0.4",
+    "tags": [
+      "auto"
+    ]
+  }
+]

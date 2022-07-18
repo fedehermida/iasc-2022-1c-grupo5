@@ -1,12 +1,32 @@
-{
-  "duration": 3000,
-  "basePrice": 4020,
-  "tags": ["auto", "chevrolet"],
-  "item": {
-    "title": "Ford Ka 1.5 2021",
-    "description": "Ford Ka 4 Ptas Automático. En garantía hasta 2025"
+[
+  {
+    "duration": 3000,
+    "basePrice": 4020,
+    "tags": [
+      "auto",
+      "Ford"
+    ],
+    "item": {
+      "title": "Ford Ka 1.5 2021",
+      "description": "Ford Ka 4 Ptas Automático. En garantía hasta 2025"
+    },
+    "state": "open",
+    "offers": [],
+    "id": "c516f630-5f3c-4462-841a-eec2580be0ad"
   },
-  "state": "opened",
-  "offers": [],
-  "id": "c516f630-5f3c-4462-841a-eec2580be0ad"
-}
+  {
+    "duration": 5000,
+    "basePrice": 15000,
+    "tags": [
+      "auto",
+      "Audi"
+    ],
+    "item": {
+      "title": "Audi TT 2.0 2022",
+      "description": "Audi TT 3 Ptas Automático. En garantía hasta 2030"
+    },
+    "state": "open",
+    "offers": [],
+    "id": "c516f630-5f3c-4462-841a-eec2580be0ac"
+  }
+]

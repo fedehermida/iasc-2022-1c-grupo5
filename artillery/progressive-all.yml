@@ -24,27 +24,50 @@ config:
         - duration: 120
           arrivalRate: 10
 scenarios:
-  - name: "Buyers & Bids"
+  - name: "Bids, Buyers & Offers"
     flow:
     - function: "genPayloads"
     - post:
         url: "/bids/buyers"
         json:
           "{{ buyerPayload1 }}"
+        capture:
+          json: "$.buyer.ip"
+          as: "buyerIp2"
         expect:
           - statusCode: 201
     - post:
         url: "/bids/buyers"
         json:
           "{{ buyerPayload2 }}"
+        capture:
+          json: "$.buyer.ip"
+          as: "buyerIp1"
         expect:
           - statusCode: 201
     - post:
         url: "/bids/bids"
         json:
           "{{ bidPayload }}"
+        capture:
+          json: "$.bid.id"
+          as: "bidId"
         expect:
           - statusCode: 201
+    - put:
+        url: "/bids/bids/{{ bidId }}"
+        json:
+          ip: "{{ buyerIp1 }}"
+          price: "{{ 1000 }}"
+        expect:
+          - statusCode: 200
+    - put:
+        url: "/bids/bids/{{ bidId }}"
+        json:
+          ip: "{{ buyerIp2 }}"
+          price: "{{ 2000 }}"
+        expect:
+          - statusCode: 200
   - name: "GET /health"
     flow:
     - get:

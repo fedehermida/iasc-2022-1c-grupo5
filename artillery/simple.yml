@@ -17,13 +17,19 @@ config:
         - duration: 120
           arrivalRate: 10
 scenarios:
-  - name: "POST /bids/buyers && /bids/bids"
+  - name: "Buyers & Bids"
     flow:
     - function: "genPayloads"
     - post:
         url: "/bids/buyers"
         json:
-          "{{ buyerPayload }}"
+          "{{ buyerPayload1 }}"
+        expect:
+          - statusCode: 201
+    - post:
+        url: "/bids/buyers"
+        json:
+          "{{ buyerPayload2 }}"
         expect:
           - statusCode: 201
     - post:
