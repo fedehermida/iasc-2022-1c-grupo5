@@ -6,6 +6,7 @@ import {
   Payload,
 } from '@nestjs/microservices';
 import { RepositoryService } from './repository.service';
+import { Cron, Interval } from '@nestjs/schedule';
 
 @Controller()
 export class RepositoryController {
@@ -45,13 +46,12 @@ export class RepositoryController {
   @EventPattern('event')
   async hello(data: string) {
     console.log(`Data from bids service: ${data}`);
-    // const EVENT_NOTIFIER = [
-    //   'publish-notification',
-    //   'close-notification',
-    //   'offer-notification',
-    // ];
-    // const randomEvent = get_random(EVENT_NOTIFIER);
-    // this.eventQueueClient.emit(randomEvent, data);
     return;
+  }
+  @Interval(1000)
+  async handleCron() {
+    console.log('Called when the current second is 1');
+    return await this.repositoryService.endBidExpired();
+    //await this.repositoryService.endBidsExpired();
   }
 }

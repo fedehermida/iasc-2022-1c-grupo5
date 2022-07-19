@@ -25,6 +25,11 @@ export class AppController {
     console.log('POST /bids');
     return await this.appService.createBid({ ...bid, state: BidState.OPEN });
   }
+  @Get('/bids')
+  async getBids() {
+    console.log('GET /bids');
+    //return await this.appService.createBid({ ...bid, state: BidState.OPEN });
+  }
 
   @Delete('/bids/:id')
   async deleteBid(@Param('id') id: string) {

@@ -39,4 +39,14 @@ export class EventController {
     });
     return 'DELETE event';
   }
+
+  @EventPattern('finish-notification')
+  endEvent(data: string): string {
+    console.log(`A new offer has been placed for Bid: ${data}`);
+
+    String((data["ip"])).toString().split(",").forEach(element => {
+      this.eventService.publishNotification(data["bid"],  data["ip"], "finish")
+    });
+    return 'DELETE event';
+  }
 }

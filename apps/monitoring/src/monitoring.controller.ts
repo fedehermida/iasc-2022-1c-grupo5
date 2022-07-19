@@ -7,17 +7,23 @@ import {
     Post,
     Put,
     Query,
-    Res
+    Req,
+    Res,
+    Render
   } from '@nestjs/common';
   import { ClientService } from './monitoring.service';
-  import { Response } from 'express';
-
+  
   @Controller()
   export class ClientController {
     constructor(private readonly clientService: ClientService) {}
-    @Get("/")
-    async getReport() {
-        console.log("RECIBI PEDIDO DE GETREPORT")
-        return "hola"
+    @Get("/service")
+    @Render("index")
+    getService() {
+        return {};
       }
+    @Get("/bids")
+    @Render("index")
+    getBids() {
+      return {};
+    }
   }
