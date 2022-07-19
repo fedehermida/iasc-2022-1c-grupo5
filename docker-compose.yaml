@@ -1,6 +1,31 @@
 version: '3.7'
 
 services:
+  raft-node:
+    build:
+      context: .
+      args:
+        SERVICE: raft-node
+      target: development
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - './apps/raft-node:/workspace/apps/raft-node'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service raft-node
+    environment:
+      - ENVIRONMENT=docker
+    networks:
+      - iasc-api-network
+      - raft-network
+
+  raft-pub-sub:
+    image: redis:alpine
+    networks:
+      - raft-network
+
   bids:
     container_name: bids
     build:
@@ -90,3 +115,4 @@ services:
 networks:
   iasc-api-network:
     driver: bridge
+  raft-network:

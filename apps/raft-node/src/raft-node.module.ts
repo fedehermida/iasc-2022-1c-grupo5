@@ -10,7 +10,7 @@ import { RaftNodeService } from './raft-node.service';
         name: 'RAFT_SERVICE',
         transport: Transport.REDIS,
         options: {
-          url: 'redis://localhost:6379',
+          url: 'redis://raft-pub-sub:6379',
         },
       },
     ]),
