@@ -48,9 +48,9 @@ export class RepositoryController {
     console.log(`Data from bids service: ${data}`);
     return;
   }
-  @Interval(1000)
+  @Interval(60000)
   async handleCron() {
-    console.log('Called when the current second is 1');
+    console.log('Called when the current minute is 1');
     return await this.repositoryService.endBidExpired();
     //await this.repositoryService.endBidsExpired();
   }

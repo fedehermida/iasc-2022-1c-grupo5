@@ -15,8 +15,8 @@ export class EventController {
   postEvent(data: JSON): string {
     console.log(JSON.stringify(data))
     console.log(`Bid ${JSON.stringify(data["bid"])} -  ${data["ip"]} has been recently published`);
-    String((data["ip"])).toString().split(",").forEach(element => {
-      this.eventService.publishNotification(data["bid"],  data["ip"], "publish")
+    data["ip"].forEach(element => {
+      this.eventService.publishNotification(data["bid"],  element, "publish")
     });
     return 'POST Event';
   }
@@ -24,8 +24,8 @@ export class EventController {
   @EventPattern('close-notification')
   patchEvent(data: string): string {
     console.log(`Bid ${data} has been closed`);
-    String((data["ip"])).toString().split(",").forEach(element => {
-      this.eventService.publishNotification(data["bid"],  data["ip"], "close")
+    data["ip"].forEach(element => {
+      this.eventService.publishNotification(data["bid"],  element, "close")
     });
     return 'PATCH EVENT';
   }
@@ -34,8 +34,8 @@ export class EventController {
   deleteEvent(data: string): string {
     console.log(`A new offer has been placed for Bid: ${data}`);
 
-    String((data["ip"])).toString().split(",").forEach(element => {
-      this.eventService.publishNotification(data["bid"],  data["ip"], "offer")
+    data["ip"].forEach(element => {
+      this.eventService.publishNotification(data["bid"],  element, "offer")
     });
     return 'DELETE event';
   }
@@ -43,9 +43,8 @@ export class EventController {
   @EventPattern('finish-notification')
   endEvent(data: string): string {
     console.log(`A new offer has been placed for Bid: ${data}`);
-
-    String((data["ip"])).toString().split(",").forEach(element => {
-      this.eventService.publishNotification(data["bid"],  data["ip"], "finish")
+    data["ip"].forEach(element => {
+      this.eventService.publishNotification(data["bid"],  element, "finish")
     });
     return 'DELETE event';
   }

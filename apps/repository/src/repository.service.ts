@@ -95,7 +95,7 @@ export class RepositoryService {
     return bid;
   }
   async endBidExpired(){
-    const bidsExpired = this.bids.filter(bid => (bid.date_create + bid.duration)<= Date.now() && bid.state=='open')
+    const bidsExpired = this.bids.filter(bid => (bid.date_create + bid.duration*60000)<= Date.now() && bid.state=='open')
     console.log("Expiro")
     console.log(Array(bidsExpired).toString())
     bidsExpired.forEach(bid =>
