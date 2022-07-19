@@ -9,10 +9,12 @@ const names = {
   '3003': 'Charlie',
 };
 
-const BIDS_SERVICE = `http://host.docker.internal:6004`;
+
+const BIDS_SERVICE = `http://127.0.0.1:6003`;
 @Injectable()
 export class ClientService {
-  ip = `http://host.docker.internal:${process.env.PORT || 8080}`;
+  ip = `http://127.0.0.1:${process.env.PORT}`;
+
 
   constructor(
     private readonly httpService: HttpService,
@@ -23,7 +25,7 @@ export class ClientService {
     const a = await this.httpService.post(
       `${BIDS_SERVICE}/buyers`,
       {
-        name: this.ip,
+        name: names[process.env.PORT],
         ip: this.ip,
         tags,
       },

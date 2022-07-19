@@ -14,8 +14,8 @@ import { ClientService } from './client.service';
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
   events: String[] = []
-
-  @Post('/register/buyer')
+  
+  @Get('/register')
   async registerBuyer(
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',' }))
     tags: string[],
@@ -32,6 +32,15 @@ export class ClientController {
     console.log("RECIBI PEDIDO DE REGISTRO A OFERTA")
     this.clientService.registerOffer(id);
     this.events.push("RECIBI PEDIDO DE REGISTRO A OFERTA: "+id)
+    const res = await this.clientService.register(tags);
+    if (res.bids.length !== 0) {
+      this.clientService.registerOffer(res.bids[0].id);
+    }
+  }
+
+  @Get('/offer/:id')
+  async registerOffer(@Param('id') id: string) {
+    this.clientService.registerOffer(id);
   }
 
   @Post('/event')
@@ -45,6 +54,13 @@ export class ClientController {
      //   this.clientService.registerOffer(event.bid.id);
     //  }, Math.round(Math.random() * 5000));
     //}
+    console.log(event);
+    if (event.type === 'bid_created') {
+      this.clientService.newBid(event.bid);
+      setTimeout(() => {
+        this.clientService.registerOffer(event.bid.id);
+      }, Math.round(Math.random() * 5000));
+    }
   }
 
   // Tiene hooks para ciertos eventos

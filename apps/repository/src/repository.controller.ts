@@ -46,6 +46,13 @@ export class RepositoryController {
   @EventPattern('event')
   async hello(data: string) {
     console.log(`Data from bids service: ${data}`);
+    // const EVENT_NOTIFIER = [
+    //   'publish-notification',
+    //   'close-notification',
+    //   'offer-notification',
+    // ];
+    // const randomEvent = get_random(EVENT_NOTIFIER);
+    // this.eventQueueClient.emit(randomEvent, data);
     return;
   }
   @Interval(60000)
