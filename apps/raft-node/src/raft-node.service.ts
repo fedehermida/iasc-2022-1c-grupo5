@@ -87,15 +87,6 @@ export class RaftNodeService {
   }
 
   async handleMessage(message: Message) {
-    if (
-      message.from === this.id &&
-      message.to === undefined &&
-      message.payload.type !== RPC_TYPE.REQUEST_VOTE
-    ) {
-      //  ignoring broadcast message from self`
-      return;
-    }
-
     if (message.to === undefined || message.to === this.id) {
       this.resetElectionTimeout();
 
@@ -105,7 +96,6 @@ export class RaftNodeService {
         this.leader = null;
         this.votedFor = null;
         this.state = NodeState.FOLLOWER;
-        this.votes = {};
         clearInterval(this.heartbeatInterval);
       }
 
@@ -121,29 +111,32 @@ export class RaftNodeService {
           this.handleAppendEntriesRequest(message.payload, message.from);
           break;
         case RPC_TYPE.APPEND_ENTRIES_REPLY: {
-          // this.handleAppendEntriesReply(message.payload, message.from);
+          if (
+            this.state === NodeState.LEADER &&
+            this.currentTerm === message.payload.term
+          ) {
+            if (message.payload.success && message.payload.lastLogIndex > -1) {
+              this.nextIndex[message.from] = message.payload.lastLogIndex + 1;
+              this.matchIndex[message.from] = message.payload.lastLogIndex;
+            } else {
+              if (this.nextIndex[message.from] == null) {
+                this.nextIndex[message.from] = this.log.length;
+              }
+              this.nextIndex[message.from] = Math.max(
+                this.nextIndex[message.from] - 1,
+                0,
+              );
+            }
+          }
           break;
         }
       }
     }
   }
   /* * */
-
   async beginHeartbeat() {
-    this.broadcast(RPC_TYPE.APPEND_ENTRIES, {
-      type: RPC_TYPE.APPEND_ENTRIES,
-      term: this.currentTerm,
-      leaderId: this.id,
-      prevLogIndex: -1,
-      prevLogTerm: -1,
-      entries: [],
-      leaderCommit: this.commitIndex,
-    });
-
-    clearInterval(this.heartbeatInterval);
-
-    this.heartbeatInterval = setInterval(() => {
-      this.broadcast(RPC_TYPE.APPEND_ENTRIES, {
+    Object.keys(this.votes).forEach((node) => {
+      this.send(node, RPC_TYPE.APPEND_ENTRIES, {
         type: RPC_TYPE.APPEND_ENTRIES,
         term: this.currentTerm,
         leaderId: this.id,
@@ -152,7 +145,50 @@ export class RaftNodeService {
         entries: [],
         leaderCommit: this.commitIndex,
       });
-    }, this.heartbeatIntervalMs);
+    });
+
+    clearInterval(this.heartbeatInterval);
+
+    const sendHeartbeat = () => {
+      Object.keys(this.votes).forEach((node) => {
+        const entriesToSend = [];
+        let prevLogIndex = -1;
+        let prevLogTerm = -1;
+
+        const logLength = this.log.length;
+
+        if (this.nextIndex[node] > 0) {
+          this.nextIndex[node] = logLength;
+        }
+
+        for (let i = this.nextIndex[node]; i < logLength; i++) {
+          entriesToSend.push({ index: i, ...this.log[i] });
+        }
+
+        if (entriesToSend.length > 0) {
+          prevLogIndex = entriesToSend[0].index - 1;
+
+          if (prevLogIndex > -1) {
+            prevLogTerm = this.log[prevLogIndex].term;
+          }
+        }
+
+        this.send(node, RPC_TYPE.APPEND_ENTRIES, {
+          type: RPC_TYPE.APPEND_ENTRIES,
+          term: this.currentTerm,
+          leaderId: this.id,
+          prevLogIndex,
+          prevLogTerm,
+          entries: entriesToSend,
+          leaderCommit: this.commitIndex,
+        });
+      });
+    };
+
+    this.heartbeatInterval = setInterval(
+      sendHeartbeat,
+      this.heartbeatIntervalMs,
+    );
   }
 
   /* * */
@@ -167,7 +203,7 @@ export class RaftNodeService {
 
     if (term >= this.currentTerm) {
       let lastLogEntry = this.log[this.log.length - 1];
-      let lastLogTerm = lastLogEntry ? lastLogEntry.term : -1;
+      let lastLogTerm = lastLogEntry != null ? lastLogEntry.term : -1;
       let candidateIsUpToDate =
         candidateLastLogTerm > lastLogTerm ||
         (candidateLastLogTerm === lastLogTerm &&
@@ -197,25 +233,22 @@ export class RaftNodeService {
   /* * */
 
   async beginElection() {
-    // Para empezar una eleccion incrementa el term
-    // pasa a estado candidato y solicita votos
     console.log(`${this.id} starting election`);
     this.state = NodeState.CANDIDATE;
     this.leader = null;
     this.votedFor = this.id;
     this.votes = {};
     this.currentTerm += 1;
-    this.requestVote();
-    // this.startElectionTimeout();
-  }
 
-  async requestVote() {
+    this.votedFor = this.id;
+    this.votes[this.id] = true;
+    const lastLogIndex = this.log.length - 1;
     this.broadcast(RPC_TYPE.REQUEST_VOTE, {
       type: RPC_TYPE.REQUEST_VOTE,
       candidateId: this.id,
       term: this.currentTerm,
-      lastLogIndex: 0, // no deberían ser siempre 0
-      lastLogTerm: 0, // no deberían ser siempre 0
+      lastLogIndex: lastLogIndex,
+      lastLogTerm: lastLogIndex > -1 ? this.log[lastLogIndex].term : -1,
     });
   }
 
@@ -230,39 +263,80 @@ export class RaftNodeService {
         this.matchIndex = {};
         this.beginHeartbeat();
         console.log(`${this.id} is now leader`);
-        // emit leader elected
       }
     }
   }
 
   async handleAppendEntriesRequest(
-    { term, entries, leaderId }: AppendEntriesRequest,
+    {
+      term,
+      entries,
+      leaderId,
+      leaderCommit,
+      prevLogIndex,
+      prevLogTerm,
+    }: AppendEntriesRequest,
     from: string,
   ) {
     if (term >= this.currentTerm && this.state !== NodeState.LEADER) {
       this.state = NodeState.FOLLOWER;
       this.leader = leaderId;
-      if (this.votedFor !== leaderId) {
-        this.send(leaderId, RPC_TYPE.REQUEST_VOTE_REPLY, {
-          type: RPC_TYPE.REQUEST_VOTE_REPLY,
-          term,
-          voteGranted: true,
-        });
-        this.votedFor = leaderId;
+    }
+
+    if (term < this.currentTerm) {
+      this.send(from, RPC_TYPE.APPEND_ENTRIES_REPLY, {
+        type: RPC_TYPE.APPEND_ENTRIES_REPLY,
+        term: this.currentTerm,
+        success: false,
+        lastLogIndex: -1,
+      });
+      return;
+    }
+
+    if (
+      prevLogIndex > -1 &&
+      (this.log[prevLogIndex] == null ||
+        this.log[prevLogIndex].term !== prevLogTerm)
+    ) {
+      this.send(from, RPC_TYPE.APPEND_ENTRIES_REPLY, {
+        type: RPC_TYPE.APPEND_ENTRIES_REPLY,
+        term: this.currentTerm,
+        success: false,
+        lastLogIndex: -1,
+      });
+      return;
+    }
+
+    let confictedAt = -1;
+
+    entries.forEach((entry) => {
+      const { index } = entry;
+      if (this.log[index] != null && this.log[index].term !== entry.term) {
+        confictedAt = index;
       }
+    });
+
+    if (confictedAt > 0) {
+      this.log = this.log.slice(0, confictedAt);
+    }
+
+    entries.forEach((entry) => {
+      const { index, ...rest } = entry;
+      if (this.log[index] == null) {
+        this.log[index] = rest;
+      }
+    });
+
+    if (leaderCommit > this.commitIndex) {
+      this.commitIndex = Math.min(leaderCommit, this.log.length - 1);
     }
 
     this.send(from, RPC_TYPE.APPEND_ENTRIES_REPLY, {
       type: RPC_TYPE.APPEND_ENTRIES_REPLY,
       success: true,
       term: this.currentTerm,
+      lastLogIndex: this.log.length - 1,
     });
-
-    if (entries.length === 0) {
-      // console.log(`${this.id} received heartbeat from ${from}`);
-    } else {
-      // console.log(`${this.id} received append entries request`);
-    }
   }
 
   /* * */

@@ -1,5 +1,8 @@
 export type LogEntry = {
   term: number;
+  data: any;
+  index?: number;
+  id: string;
 };
 
 export enum NodeState {
@@ -47,6 +50,7 @@ export type AppendEntriesReply = {
   type: RPC_TYPE.APPEND_ENTRIES_REPLY;
   term: number;
   success: boolean;
+  lastLogIndex: number;
 };
 
 export type PayloadType =
