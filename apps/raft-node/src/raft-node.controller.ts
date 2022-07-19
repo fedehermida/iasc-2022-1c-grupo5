@@ -22,4 +22,9 @@ export class RaftNodeController {
   handleAppendEntries(@Payload() data: Message) {
     this.raftNodeService.handleMessage(data);
   }
+
+  @EventPattern(RPC_TYPE.APPEND_ENTRIES_REPLY)
+  handleAppendEntriesReply(@Payload() data: Message) {
+    this.raftNodeService.handleMessage(data);
+  }
 }
