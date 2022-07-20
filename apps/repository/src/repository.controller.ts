@@ -55,10 +55,9 @@ export class RepositoryController {
     // this.eventQueueClient.emit(randomEvent, data);
     return;
   }
-  @Interval(60000)
+  @Interval(1000)
   async handleCron() {
     console.log('Called when the current minute is 1');
-    return await this.repositoryService.endBidExpired();
-    //await this.repositoryService.endBidsExpired();
+    return this.repositoryService.endBidExpired();
   }
 }

@@ -42,6 +42,9 @@ export class CreateBidDto {
 
   @IsNumber()
   basePrice: number;
+  @IsNumber()
+  @IsOptional()
+  date_create: number;
 
   @IsArray()
   tags: string[];

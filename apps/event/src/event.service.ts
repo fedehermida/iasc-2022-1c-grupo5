@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class EventService {
@@ -11,18 +12,15 @@ export class EventService {
   }
 
 
-   async publishNotification(bid: JSON, ip: String, event:String): Promise<String> {
+   async publishNotification(bid: JSON, ip: String, event:String):Promise<any>{
     console.log(`${ip}/event`)
-    const response = await this.httpService.post(`${ip}/event`,
+    return this.httpService.post(`${ip}/event`,
        {'data':bid,
         'event': event 
       }, {
       headers: {
       'Content-Type': 'application/json'
       }
-    });
-    const data = (await lastValueFrom(response)).data;
-    console.log(data)
-    return 'Hello World from Event Service!';
+    })
   }
 }

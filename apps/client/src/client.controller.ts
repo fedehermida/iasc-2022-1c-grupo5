@@ -32,15 +32,6 @@ export class ClientController {
     console.log("RECIBI PEDIDO DE REGISTRO A OFERTA")
     this.clientService.registerOffer(id);
     this.events.push("RECIBI PEDIDO DE REGISTRO A OFERTA: "+id)
-    const res = await this.clientService.register(tags);
-    if (res.bids.length !== 0) {
-      this.clientService.registerOffer(res.bids[0].id);
-    }
-  }
-
-  @Get('/offer/:id')
-  async registerOffer(@Param('id') id: string) {
-    this.clientService.registerOffer(id);
   }
 
   @Post('/event')

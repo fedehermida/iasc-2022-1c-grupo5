@@ -39,7 +39,8 @@ export class RepositoryService {
     var buyers = await this.buyers.filter(buyer => newBid["tags"].filter(bid=>buyer["tags"].includes(bid)).length>0)
     var ips = await buyers.map(buyer =>  buyer["ip"])
     if (ips.length>0){
-      this.eventQueueClient.emit('publish-notification', {"bid":{"id": newBid.id,"basePrice": newBid.basePrice, "duration":newBid.duration, "item": newBid.item}, "ip":ips});
+      ips.forEach(ip =>{
+      this.eventQueueClient.emit('publish-notification', {"bid":{"id": newBid.id,"basePrice": newBid.basePrice, "duration":newBid.duration, "item": newBid.item}, "ip":ip});})
     }
       return { bid: newBid };
   }
@@ -55,7 +56,8 @@ export class RepositoryService {
     var buyers = await this.buyers.filter(buyer => bid["tags"].filter(bid=>buyer["tags"].includes(bid)).length>0)
     var ips = await buyers.map(buyer =>  buyer["ip"])
     if (ips.length>0){
-    this.eventQueueClient.emit('close-notification', {"bid": id, ip: ips});
+      ips.forEach(ip =>{
+    this.eventQueueClient.emit('close-notification', {"bid": id, ip: ip});})
     }
     return await this.getBid(id);
   }
@@ -71,10 +73,15 @@ export class RepositoryService {
     var ips = await buyers.map(buyer =>  buyer["ip"])
     if (ips.length>0){
       if (bid.offers.length>0){
-       
-        this.eventQueueClient.emit('finish-notification', {"bid": {"id": id, "winner": bid.offers[bid.offers.length-1].ip, "price": bid.offers[bid.offers.length-1].price }, ip: ips});
+        ips.forEach(ip =>{
+          this.eventQueueClient.emit('finish-notification', {"bid": {"id": id, "winner": bid.offers[bid.offers.length-1].ip, "price": bid.offers[bid.offers.length-1].price }, ip: ip});
+        }
+          )
+        
       }else{
-        this.eventQueueClient.emit('finish-notification', {"bid": {"id": id, "winner": "Sin ofertas", "price": "Sin ofertas" }, ip: ips});
+        ips.forEach(ip =>{
+          this.eventQueueClient.emit('finish-notification', {"bid": {"id": id, "winner": "Sin ofertas", "price": "Sin ofertas" }, ip: ip});
+        })
       }
     }
     return await this.getBid(id);
@@ -88,14 +95,16 @@ export class RepositoryService {
         var buyers = await this.buyers.filter(buyer => bid["tags"].filter(bid=>buyer["tags"].includes(bid)).length>0)
         var ips = await buyers.map(buyer =>  buyer["ip"])
         if (ips.length>0){
-        this.eventQueueClient.emit('offer-notification', {"bid": {"id":bid.id, "offer": offer}, ip:ips});
+          ips.forEach(ip =>{
+          this.eventQueueClient.emit('offer-notification', {"bid": {"id":bid.id, "offer": offer}, ip:ip});
+          })
         }
       }
     }
     return bid;
   }
   async endBidExpired(){
-    const bidsExpired = this.bids.filter(bid => (bid.date_create + bid.duration*60000)<= Date.now() && bid.state=='open')
+    const bidsExpired = this.bids.filter(bid => (bid.date_create + bid.duration*1000)<= Date.now() && bid.state=='open')
     console.log("Expiro")
     console.log(Array(bidsExpired).toString())
     bidsExpired.forEach(bid =>
