@@ -44,13 +44,13 @@
         "tsConfigPath": "apps/client/tsconfig.app.json"
       }
     },
-    "monitoring": {
-      "type": "application",
-      "root": "apps/monitoring",
-      "entryFile": "main",
-      "sourceRoot": "apps/monitoring/src",
+    "types": {
+      "type": "library",
+      "root": "libs/types",
+      "entryFile": "index",
+      "sourceRoot": "libs/types/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/monitoring/tsconfig.app.json"
+        "tsConfigPath": "libs/types/tsconfig.lib.json"
       }
     }
   }

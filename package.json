@@ -83,7 +83,11 @@
     "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "roots": [
-      "<rootDir>/apps/"
-    ]
+      "<rootDir>/apps/",
+      "<rootDir>/libs/"
+    ],
+    "moduleNameMapper": {
+      "^@iasc/types(|/.*)$": "<rootDir>/libs/types/src/$1"
+    }
   }
 }

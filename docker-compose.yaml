@@ -2,28 +2,6 @@ version: '3.7'
 
 services:
 
-  client:
-    container_name: client
-    build:
-      context: .
-      args:
-        SERVICE: client
-      target: development
-    command: npm run start:service client
-    ports:
-      - 8080:8080
-
-  monitoring:
-    container_name: monitoring
-    build:
-      context: .
-      args:
-        SERVICE: monitoring
-      target: development
-    command: npm run start:service monitoring
-    ports:
-      - 5000:5000
-
   bids:
     container_name: bids
     build:

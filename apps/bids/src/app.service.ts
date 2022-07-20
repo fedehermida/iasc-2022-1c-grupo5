@@ -1,10 +1,9 @@
+import { Bid, Buyer, CreateBuyerDto, Offer } from '@iasc/types';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable } from '@nestjs/common';
-import { Bid, Buyer, Offer } from './types';
 
-import { ClientProxy, ClientRedis } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
-import { CreateBuyerDto } from './dto';
 
 @Injectable()
 export class AppService {

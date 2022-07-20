@@ -1,7 +1,7 @@
+import { Bid, BidState, Buyer, Offer } from '@iasc/types';
 import { Inject, Injectable } from '@nestjs/common';
-import { Bid, BidState, Buyer, Offer } from './types';
-import { v4 as uuidv4 } from 'uuid';
 import { ClientProxy } from '@nestjs/microservices';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class RepositoryService {
