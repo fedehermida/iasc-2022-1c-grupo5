@@ -1,14 +1,14 @@
+import { BidState, CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
 import {
   Body,
   Controller,
   Delete,
-  Get, Param,
+  Get,
+  Param,
   Post,
   Put
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from './dto';
-import { BidState } from './types';
 
 @Controller()
 export class AppController {
