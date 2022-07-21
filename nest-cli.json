@@ -52,15 +52,6 @@
       "compilerOptions": {
         "tsConfigPath": "libs/types/tsconfig.lib.json"
       }
-    },
-    "raft-node": {
-      "type": "application",
-      "root": "apps/raft-node",
-      "entryFile": "main",
-      "sourceRoot": "apps/raft-node/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/raft-node/tsconfig.app.json"
-      }
     }
   }
 }
