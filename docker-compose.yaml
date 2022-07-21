@@ -68,8 +68,8 @@ services:
       - './node_modules:/workspace/node_modules'
     command: npm run start:service event
     ports:
-      - 6001:3000
-      - 20001:9229
+      - 6005:3000
+      - 20004:9229
     env_file: ${EVENT_ENV}
     environment:
       - ENVIRONMENT=docker
@@ -92,8 +92,8 @@ services:
       - './node_modules:/workspace/node_modules'
     command: npm run start:service repository
     ports:
-      - 6002:3000
-      - 20002:9229
+      - 6006:3000
+      - 20005:9229
     env_file: ${REPOSITORY_ENV}
     environment:
       - ENVIRONMENT=docker

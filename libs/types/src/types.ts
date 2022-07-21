@@ -16,6 +16,7 @@ export type Bid = {
   };
   offers: Offer[];
   state: BidState;
+  date_create: number;
 };
 
 export enum BidState {

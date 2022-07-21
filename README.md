@@ -103,23 +103,54 @@ Note left of REPOSITORY: Si tiene compradores
 
 ## Endpoints
 ### Comprador
-**POST** /bids/{id} 
+**POST** /event 
 > Notifica una creacion/modificacion de subasta al comprador
 
     {
-      "price": 0,
-      "duration": 3600,
-      "article": {
-        "name": "",
-        "description": ""
-      }
+      "data": {"id": "",
+              "basePrice": 100, 
+              "duration": 60, 
+              "item": {
+                      "title": "",
+                      "description": "",
+                      "image": ""
+                      }
+               },
+      "event": "publish",
     }
-**DELETE** /bids/{id}
+    
+**POST** /event
 > Notifica que se finalizo una subasta
 
     {
-        "winner": {{name}},
-        "price": 100
+        "data": {
+                "id": id, 
+                "winner": "Sin ofertas", 
+                "price": "Sin ofertas" }
+        },
+        "event": "finish"
+    }
+    
+ **POST** /event
+> Notifica que se cerro una subasta
+
+    {
+        "data": "id_bid",
+        "event": "close"
+    }
+    
+**POST** /event
+> Notifica que se creo una oferta para una subasta
+
+    {
+        "data": {
+              "id": "id", 
+              "offer": {
+                  "ip": "ip";
+                  "price": 100;
+              }
+        },
+        "event": "offer"
     }
 
 
@@ -129,10 +160,10 @@ Note left of REPOSITORY: Si tiene compradores
 
     {                                      
       "tags": ["hogar", "muebles"]         
-      "price": 0,                          
+      "basePrice": 0,                          
       "duration": 3600,                    
-      "article": {                         
-        "name": "",                        
+      "item": {                         
+        "title": "",                        
         "description": ""                  
       }                                    
     }                                      
@@ -140,8 +171,22 @@ Note left of REPOSITORY: Si tiene compradores
 Response
 
     {
-      "id": 1
+      "duration": 10000,
+		  "basePrice": 100,
+		  "tags": [
+			      "hogar",
+			      "muebles"
+		        ],
+		  "item": {
+			    "title": "",
+			    "description": ""
+		  },
+		  "state": "open",
+		  "offers": [],
+		  "id": "c27d11ff-3953-4ff7-955f-6d0c5b3299b7",
+		  "date_create": 1658202107508
     }
+    
 **DELETE** /bids/{{id}}
 > El vendedor cancela la subasta
 

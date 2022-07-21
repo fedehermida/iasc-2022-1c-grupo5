@@ -11,9 +11,13 @@ export class EventController {
     return this.eventService.getHello();
   }
 
-  @EventPattern('bid-created')
-  async bidCreated(data: string) {
-    console.log(`Bid ${data} has been recently published`);
+  @EventPattern('publish-notification')
+  postEvent(data: JSON): string {
+    console.log(JSON.stringify(data))
+    console.log(`Bid ${JSON.stringify(data["bid"])} -  ${data["ip"]} has been recently published`);
+    this.eventService.publishNotification(data["bid"],  data["ip"], "publish");
+
+    return 'POST Event';
   }
 
   @EventPattern('bid-ended')
@@ -24,10 +28,21 @@ export class EventController {
   @EventPattern('bid-closed')
   async bidClosed(data: string) {
     console.log(`Bid ${data} has been closed`);
+    this.eventService.publishNotification(data["bid"],  data["ip"], "close");
+    return 'PATCH EVENT';
   }
 
-  @EventPattern('offer-placed')
-  async offerPlaced(data: string) {
-    console.log(`Bid ${data} has a new offer`);
+  @EventPattern('offer-notification')
+  deleteEvent(data: string): string {
+    console.log(`A new offer has been placed for Bid: ${data}`);
+    this.eventService.publishNotification(data["bid"],  data["ip"], "offer");
+    return 'DELETE event';
+  }
+
+  @EventPattern('finish-notification')
+  endEvent(data: string): string {
+    console.log(`A new offer has been placed for Bid: ${data}`);
+    this.eventService.publishNotification(data["bid"],  data["ip"], "finish")
+    return 'DELETE event';
   }
 }

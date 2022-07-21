@@ -50,11 +50,28 @@ export class RepositoryService {
 
   async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
     const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
+    newBid.date_create = Date.now();
     await this.bids.push(newBid);
 
-    this.eventQueueClient.emit('bid-created', newBid.id);
-
-    return newBid;
+    var buyers = await this.buyers.filter(
+      (buyer) =>
+        newBid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
+    );
+    var ips = await buyers.map((buyer) => buyer['ip']);
+    if (ips.length > 0) {
+      ips.forEach((ip) => {
+        this.eventQueueClient.emit('publish-notification', {
+          bid: {
+            id: newBid.id,
+            basePrice: newBid.basePrice,
+            duration: newBid.duration,
+            item: newBid.item,
+          },
+          ip: ip,
+        });
+      });
+    }
+    return { bid: newBid };
   }
 
   async findAllBids() {
@@ -80,14 +97,6 @@ export class RepositoryService {
     );
   }
 
-  async getCurrentBidPrice(id: string) {
-    const bid = await this.findBidById(id);
-    if (bid) {
-      const biggestOffer = await this.findBiggestOffer(id);
-      return biggestOffer ? biggestOffer.price : bid.basePrice;
-    }
-  }
-
   async findBiggestOffer(id: string) {
     const bid = await this.findBidById(id);
     if (bid && bid.offers.length > 0) {
@@ -103,50 +112,108 @@ export class RepositoryService {
     return updatedBid;
   }
 
+  async getCurrentBidPrice(id: string) {
+    const bid = await this.findBidById(id);
+    if (bid) {
+      const biggestOffer = await this.findBiggestOffer(id);
+      return biggestOffer ? biggestOffer.price : bid.basePrice;
+    }
+  }
+
   /* * */
 
   async cancelBid(id: string) {
-    await this.updateBid(id, { state: BidState.CANCELED });
-
-    this.eventQueueClient.emit('bid.closed', id);
-
+    this.bids = this.bids.map((bid) => {
+      if (bid.id == id && bid.state == 'open') {
+        return { ...bid, state: BidState.CANCELED };
+      }
+      return bid;
+    });
+    var bid = this.bids.filter((bid) => bid['id'] == id)[0];
+    var buyers = await this.buyers.filter(
+      (buyer) =>
+        bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
+    );
+    var ips = await buyers.map((buyer) => buyer['ip']);
+    if (ips.length > 0) {
+      ips.forEach((ip) => {
+        this.eventQueueClient.emit('close-notification', { bid: id, ip: ip });
+      });
+    }
     return await this.findBidById(id);
   }
-
-  async getBidWinner(id: string) {
-    const bid = await this.findBidById(id);
-    if (bid && bid.state !== BidState.CANCELED) {
-      const biggestOffer = await this.findBiggestOffer(id);
-      if (biggestOffer) {
-        return this.findBuyerById(biggestOffer.ip);
+  async finishBid(id: string) {
+    this.bids = this.bids.map((bid) => {
+      if (bid.id === id) {
+        return { ...bid, state: BidState.ENDED };
+      }
+      return bid;
+    });
+    var bid = this.bids.filter((bid) => bid['id'] == id)[0];
+    var buyers = await this.buyers.filter(
+      (buyer) =>
+        bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
+    );
+    var ips = await buyers.map((buyer) => buyer['ip']);
+    if (ips.length > 0) {
+      if (bid.offers.length > 0) {
+        ips.forEach((ip) => {
+          this.eventQueueClient.emit('finish-notification', {
+            bid: {
+              id: id,
+              winner: bid.offers[bid.offers.length - 1].ip,
+              price: bid.offers[bid.offers.length - 1].price,
+            },
+            ip: ip,
+          });
+        });
+      } else {
+        ips.forEach((ip) => {
+          this.eventQueueClient.emit('finish-notification', {
+            bid: { id: id, winner: 'Sin ofertas', price: 'Sin ofertas' },
+            ip: ip,
+          });
+        });
       }
     }
-  }
-
-  async endBid(id: string) {
-    await this.updateBid(id, { state: BidState.ENDED });
-    const winner = await this.getBidWinner(id);
-    const bid = await this.findBidById(id);
-
-    if (bid) {
-      this.eventQueueClient.emit('bid-ended', bid.id);
-
-      return { bid, winner };
-    }
+    return await this.findBidById(id);
   }
 
   async registerOffer(id: string, offer: Offer) {
     const bid = await this.findBidById(id);
-    if (bid) {
-      bid.offers.push(offer);
-
-      this.eventQueueClient.emit('offer-placed', bid.id);
-
-      return bid;
+    if (bid && bid.state == 'open') {
+      if (
+        offer.price > bid.basePrice &&
+        (bid.offers.length == 0 ||
+          offer.price > bid.offers[bid.offers.length - 1].price)
+      ) {
+        bid.offers.push(offer);
+        var buyers = await this.buyers.filter(
+          (buyer) =>
+            bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
+        );
+        var ips = await buyers.map((buyer) => buyer['ip']);
+        if (ips.length > 0) {
+          ips.forEach((ip) => {
+            this.eventQueueClient.emit('offer-notification', {
+              bid: { id: bid.id, offer: offer },
+              ip: ip,
+            });
+          });
+        }
+      }
     }
+    return bid;
   }
-
-  getHello(): string {
-    return 'Hello World from Repository Service!';
+  
+  async endBidExpired() {
+    const bidsExpired = this.bids.filter(
+      (bid) =>
+        bid.date_create + bid.duration * 1000 <= Date.now() &&
+        bid.state == 'open',
+    );
+    console.log('Expiro');
+    console.log(Array(bidsExpired).toString());
+    bidsExpired.forEach((bid) => this.finishBid(bid.id));
   }
 }

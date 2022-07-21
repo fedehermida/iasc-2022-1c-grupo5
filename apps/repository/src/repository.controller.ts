@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RepositoryService } from './repository.service';
+import { Cron, Interval } from '@nestjs/schedule';
 
 @Controller()
 export class RepositoryController {
@@ -57,11 +58,17 @@ export class RepositoryController {
 
   @MessagePattern({ cmd: 'end_bid' })
   async endBid(@Payload() dto) {
-    return await this.repositoryService.endBid(dto.id);
+    return await this.repositoryService.finishBid(dto.id);
   }
 
   @MessagePattern({ cmd: 'register_offer' })
   async registerOffer(@Payload() dto) {
     return await this.repositoryService.registerOffer(dto.id, dto.offer);
+  }
+
+  @Interval(1000)
+  async handleCron() {
+    console.log('Called when the current minute is 1');
+    return this.repositoryService.endBidExpired();
   }
 }

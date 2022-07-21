@@ -1,3 +1,4 @@
+import { BidState, CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
 import {
   BidState,
   CreateBidDto,
@@ -29,6 +30,11 @@ export class AppController {
   async createBid(@Body() bid: CreateBidDto) {
     console.log('POST /bids');
     return await this.appService.createBid({ ...bid, state: BidState.OPEN });
+  }
+  @Get('/bids')
+  async getBids() {
+    console.log('GET /bids');
+    //return await this.appService.createBid({ ...bid, state: BidState.OPEN });
   }
 
   @Delete('/bids/:id')
