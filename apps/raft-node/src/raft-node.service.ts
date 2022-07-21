@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Raft } from './constants';
 import {
   AppendEntriesRequest,
+  LogEntry,
   Message,
   NodeState,
   PayloadType,
@@ -130,6 +131,41 @@ export class RaftNodeService {
           }
           break;
         }
+        case RPC_TYPE.APPEND_ENTRY: {
+          if (this.state === NodeState.LEADER) {
+            const entry: LogEntry = {
+              term: this.currentTerm,
+              id: message.payload.id,
+              data: message.payload.data,
+            };
+            this.log.push(entry);
+          }
+          break;
+        }
+      }
+
+      if (this.state === NodeState.LEADER) {
+        let highestPossibleCommitIndex = -1;
+
+        for (let i = this.commitIndex + 1, ii = this.log.length; i < ii; ++i) {
+          if (
+            this.log[i].term === this.currentTerm &&
+            // And there must be a majority of matchIndexes >= i
+            Object.values(this.matchIndex).filter((v) => v >= i).length >
+              Math.ceil(this.clusterSize / 2)
+          ) {
+            highestPossibleCommitIndex = i;
+          }
+        }
+
+        if (highestPossibleCommitIndex > this.commitIndex) {
+          this.commitIndex = highestPossibleCommitIndex;
+        }
+      }
+
+      // All nodes should commit entries between lastApplied and commitIndex
+      for (let i = this.lastApplied + 1, ii = this.commitIndex; i <= ii; ++i) {
+        this.lastApplied = i;
       }
     }
   }
@@ -157,11 +193,11 @@ export class RaftNodeService {
 
         const logLength = this.log.length;
 
-        if (this.nextIndex[node] > 0) {
+        if (this.nextIndex[node] == null) {
           this.nextIndex[node] = logLength;
         }
 
-        for (let i = this.nextIndex[node]; i < logLength; i++) {
+        for (let i = this.nextIndex[node]; i < logLength; ++i) {
           entriesToSend.push({ index: i, ...this.log[i] });
         }
 
@@ -355,5 +391,37 @@ export class RaftNodeService {
       this.resetElectionTimeout();
       this.beginElection();
     }, timeout);
+  }
+
+  /* * */
+  append(data) {
+    const id = `${this.id}_${uuidv4()}`;
+
+    const performRequest = () => {
+      let entry: LogEntry;
+
+      if (this.state === NodeState.LEADER) {
+        entry = {
+          id,
+          term: this.currentTerm,
+          data,
+        };
+        this.log.push(entry);
+      } else {
+        console.log(`${this.id} is not leader sending entry to ${this.leader}`);
+        this.send(this.leader, RPC_TYPE.APPEND_ENTRY, {
+          type: RPC_TYPE.APPEND_ENTRY,
+          id,
+          data,
+          term: this.currentTerm,
+        });
+      }
+    };
+
+    if (this.state === NodeState.LEADER) {
+      performRequest();
+    } else if (this.state === NodeState.FOLLOWER && this.leader != null) {
+      performRequest();
+    }
   }
 }

@@ -16,7 +16,7 @@ export enum RPC_TYPE {
   REQUEST_VOTE_REPLY = 'REQUEST_VOTE_REPLY',
   APPEND_ENTRIES = 'APPEND_ENTRIES',
   APPEND_ENTRIES_REPLY = 'APPEND_ENTRIES_REPLY',
-  // APPEND_ENTRY = 'APPEND_ENTRY',
+  APPEND_ENTRY = 'APPEND_ENTRY',
   // DISPATCH = 'DISPATCH',
   // DISPATCH_SUCCESS = 'DISPATCH_SUCCESS',
   // DISPATCH_ERROR = 'DISPATCH_ERROR',
@@ -53,11 +53,19 @@ export type AppendEntriesReply = {
   lastLogIndex: number;
 };
 
+export type AppendEntry = {
+  type: RPC_TYPE.APPEND_ENTRY;
+  term: number;
+  data: any;
+  id: string;
+};
+
 export type PayloadType =
   | VoteRequest
   | VoteReply
   | AppendEntriesRequest
-  | AppendEntriesReply;
+  | AppendEntriesReply
+  | AppendEntry;
 
 export type Message = {
   payload: PayloadType;

@@ -8,12 +8,14 @@ async function bootstrap() {
     // @ts-ignore
     transport: Transport.REDIS,
     options: {
-      host: 'raft-pub-sub',
+      host: 'localhost',
       port: 6379,
     },
   });
 
   await app.startAllMicroservices();
-  // await app.listen(process.env.PORT || 3000);
+  if (process.env.PORT !== '') {
+    await app.listen(process.env.PORT || 3000);
+  }
 }
 bootstrap();

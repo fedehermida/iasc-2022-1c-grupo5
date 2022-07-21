@@ -11,7 +11,7 @@ import { RaftNodeService } from './raft-node.service';
         // @ts-ignore
         transport: Transport.REDIS,
         options: {
-          host: 'raft-pub-sub',
+          host: 'localhost',
           port: 6379,
         },
       },
