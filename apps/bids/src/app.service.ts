@@ -55,9 +55,9 @@ export class AppService {
 
     if (bidCreated) {
       // timeout para terminar la subasta
-      setTimeout(() => {
-        this.endBid(bidCreated.id);
-      }, bid.duration);
+      // setTimeout(() => {
+      //   this.endBid(bidCreated.id);
+      // }, bid.duration);
       // devuelve la subasta creada
       return { bid: bidCreated };
     }

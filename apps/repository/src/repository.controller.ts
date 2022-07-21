@@ -67,9 +67,9 @@ export class RepositoryController {
     return await this.repositoryService.registerOffer(dto.id, dto.offer);
   }
 
-  // @Interval(1000)
-  // async handleCron() {
-  //   console.log('Called when the current minute is 1');
-  //   return this.repositoryService.endBidExpired();
-  // }
+  @Interval(1000)
+  async handleCron() {
+    console.log('Called when the current minute is 1');
+    return this.repositoryService.endBidExpired();
+  }
 }
