@@ -8,9 +8,11 @@ import { RaftNodeService } from './raft-node.service';
     ClientsModule.register([
       {
         name: 'RAFT_SERVICE',
+        // @ts-ignore
         transport: Transport.REDIS,
         options: {
-          url: 'redis://raft-pub-sub:6379',
+          host: 'raft-pub-sub',
+          port: 6379,
         },
       },
     ]),

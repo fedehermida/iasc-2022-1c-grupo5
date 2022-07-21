@@ -20,6 +20,8 @@ services:
     networks:
       - iasc-api-network
       - raft-network
+    deploy:
+      replicas: 3
 
   raft-pub-sub:
     image: redis:alpine

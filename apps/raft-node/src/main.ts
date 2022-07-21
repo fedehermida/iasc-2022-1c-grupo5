@@ -5,9 +5,11 @@ import { RaftNodeModule } from './raft-node.module';
 async function bootstrap() {
   const app = await NestFactory.create(RaftNodeModule);
   app.connectMicroservice<MicroserviceOptions>({
+    // @ts-ignore
     transport: Transport.REDIS,
     options: {
-      url: `redis://raft-pub-sub:6379`,
+      host: 'raft-pub-sub',
+      port: 6379,
     },
   });
 
