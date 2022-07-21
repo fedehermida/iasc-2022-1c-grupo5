@@ -5,7 +5,7 @@ import { RepositoryModule } from './repository.module';
 async function bootstrap() {
   const app = await NestFactory.create(RepositoryModule);
 
-  const rabbitMQService = app.connectMicroservice<MicroserviceOptions>({
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [`amqp://${process.env.RABBITMQ_URL}`],
@@ -14,6 +14,15 @@ async function bootstrap() {
       queueOptions: {
         durable: true,
       },
+    },
+  });
+
+  app.connectMicroservice<MicroserviceOptions>({
+    // @ts-ignore
+    transport: Transport.REDIS,
+    options: {
+      host: process.env.REDIS_HOST,
+      port: 6379,
     },
   });
 

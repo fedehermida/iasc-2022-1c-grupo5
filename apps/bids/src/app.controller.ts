@@ -1,24 +1,23 @@
 import { BidState, CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
 import {
-  BidState,
-  CreateBidDto,
-  CreateBuyerDto,
-  CreateOfferDto,
-} from '@iasc/types';
-import {
   Body,
   Controller,
   Delete,
   Get,
   Param,
   Post,
-  Put,
+  Put
 } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
+
+  @Get('/buyers')
+  async getBuyers() {
+    return await this.appService.getBuyers();
+  }
 
   @Post('/buyers')
   async registerBuyer(@Body() buyer: CreateBuyerDto) {

@@ -12,6 +12,13 @@ export class AppService {
     @Inject('BIDS_QUEUE_SERVICE') private readonly bidsQueueClient: ClientProxy,
   ) {}
 
+  async getBuyers() {
+    const buyers = await lastValueFrom(
+      this.bidsQueueClient.send({ cmd: 'get_buyers' }, {}),
+    );
+    return buyers;
+  }
+
   async registerBuyer(buyer: CreateBuyerDto) {
     // comunicación con servicio repositorio para crear comprador
     const buyerCreated = await lastValueFrom(

@@ -3,6 +3,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RepositoryController } from './repository.controller';
 import { RepositoryService } from './repository.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RaftModule } from './raft/raft.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         },
       },
     ]),
+    RaftModule,
   ],
   controllers: [RepositoryController],
   providers: [RepositoryService],

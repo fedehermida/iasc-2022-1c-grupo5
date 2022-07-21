@@ -1,28 +1,6 @@
 version: '3.7'
 
 services:
-  raft-node:
-    build:
-      context: .
-      args:
-        SERVICE: raft-node
-      target: development
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    volumes:
-      - './apps/raft-node:/workspace/apps/raft-node'
-      - './libs:/workspace/libs'
-      - './node_modules:/workspace/node_modules'
-    command: npm run start:service raft-node
-    environment:
-      - ENVIRONMENT=docker
-    networks:
-      - iasc-api-network
-      - raft-network
-    deploy:
-      replicas: 3
-
   raft-pub-sub:
     image: redis:alpine
     networks:
@@ -77,7 +55,7 @@ services:
       - iasc-api-network
 
   repository:
-    container_name: repository
+    # container_name: repository
     build:
       context: .
       args:
@@ -91,14 +69,17 @@ services:
       - './libs:/workspace/libs'
       - './node_modules:/workspace/node_modules'
     command: npm run start:service repository
-    ports:
-      - 6006:3000
-      - 20005:9229
+    # ports:
+      # - 6006:3000
+      # - 20005:9229
     env_file: ${REPOSITORY_ENV}
     environment:
       - ENVIRONMENT=docker
     networks:
       - iasc-api-network
+      - raft-network
+    deploy:
+      replicas: 3
 
   rabbitmq:
     image: rabbitmq:3.10.6-management

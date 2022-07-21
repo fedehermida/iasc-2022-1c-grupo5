@@ -2,6 +2,7 @@ import { Bid, BidState, Buyer, Offer } from '@iasc/types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { v4 as uuidv4 } from 'uuid';
+import { RaftService } from './raft/raft.service';
 
 type BidCondition = (bid: Bid) => boolean;
 
@@ -23,6 +24,7 @@ export class RepositoryService {
   constructor(
     @Inject('EVENT_QUEUE_SERVICE')
     private readonly eventQueueClient: ClientProxy,
+    private readonly raftService: RaftService,
   ) {}
 
   async findBidsByConditions(...conditions: BidCondition[]) {
@@ -34,6 +36,7 @@ export class RepositoryService {
   /* BUYERS */
 
   async createBuyer(buyer: Buyer) {
+    // this.raftService.append({ buyer });
     await this.buyers.push(buyer);
     return buyer;
   }
@@ -43,6 +46,7 @@ export class RepositoryService {
   }
 
   async findAllBuyers() {
+    // return this.raftService.log;
     return await this.buyers;
   }
 
@@ -205,7 +209,7 @@ export class RepositoryService {
     }
     return bid;
   }
-  
+
   async endBidExpired() {
     const bidsExpired = this.bids.filter(
       (bid) =>
