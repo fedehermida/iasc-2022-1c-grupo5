@@ -9,10 +9,12 @@ const names = {
   '3003': 'Charlie',
 };
 
+
 const BIDS_SERVICE = `http://127.0.0.1:6003`;
 @Injectable()
 export class ClientService {
   ip = `http://127.0.0.1:${process.env.PORT}`;
+
 
   constructor(
     private readonly httpService: HttpService,
