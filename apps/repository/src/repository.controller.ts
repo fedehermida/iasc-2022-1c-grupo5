@@ -6,6 +6,7 @@ import {
   Payload,
 } from '@nestjs/microservices';
 import { RepositoryService } from './repository.service';
+import { Cron, Interval } from '@nestjs/schedule';
 
 @Controller()
 export class RepositoryController {
@@ -53,5 +54,10 @@ export class RepositoryController {
     // const randomEvent = get_random(EVENT_NOTIFIER);
     // this.eventQueueClient.emit(randomEvent, data);
     return;
+  }
+  @Interval(1000)
+  async handleCron() {
+    console.log('Called when the current minute is 1');
+    return this.repositoryService.endBidExpired();
   }
 }
