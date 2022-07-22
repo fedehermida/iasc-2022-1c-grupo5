@@ -6,6 +6,54 @@ services:
     networks:
       - raft-network
 
+  client-a:
+    container_name: client-a
+    build:
+      context: .
+      args:
+        SERVICE: client
+      target: development
+    volumes:
+      - './apps/client:/workspace/apps/client'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service client
+    ports:
+      - 3001:3001
+    env_file: ${CLIENT_ENV}
+    environment:
+      - PORT=3001
+      - ENVIRONMENT=docker
+      - SERVICE_NAME=client-a
+      - BIDS_SERVICE=bids
+      - CLIENT_NAME=client-a
+    networks:
+      - iasc-api-network
+
+  client-b:
+    container_name: client-b
+    build:
+      context: .
+      args:
+        SERVICE: client
+      target: development
+    volumes:
+      - './apps/client:/workspace/apps/client'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service client
+    ports:
+      - 3002:3002
+    env_file: ${CLIENT_ENV}
+    environment:
+      - PORT=3002
+      - ENVIRONMENT=docker
+      - SERVICE_NAME=client-b
+      - BIDS_SERVICE=bids
+      - CLIENT_NAME=client-b
+    networks:
+      - iasc-api-network
+
   bids:
     container_name: bids
     build:
