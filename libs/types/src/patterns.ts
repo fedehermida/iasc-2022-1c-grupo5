@@ -8,4 +8,6 @@ export enum RepositoryPattern {
   EndBid = 'end_bid',
   RegisterOffer = 'register_offer',
   GetBidsByTags = 'get_bids_by_tags',
+
+  GetLog = 'get_log',
 }

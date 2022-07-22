@@ -45,7 +45,7 @@ export class RaftService {
   constructor(
     @Inject('RAFT_SERVICE') private readonly redisService: ClientProxy,
   ) {
-    console.log(`[${this.id}] starting`);
+    console.log(`[${this.id} - (${this.currentTerm})] starting`);
 
     this.clusterSize = Raft.CLUSTER_SIZE;
     this.heartbeatIntervalMs = Raft.HEARTBEAT_INTERVAL;
@@ -198,7 +198,9 @@ export class RaftService {
     }: VoteRequest,
     from: string,
   ) {
-    console.log(`[${this.id}] received vote request from ${from}`);
+    console.log(
+      `[${this.id} - (${this.currentTerm})] received vote request from ${from}`,
+    );
     if (term >= this.currentTerm) {
       let lastLogEntry = this.log[this.lastLogIndex()];
       let lastLogTerm = lastLogEntry != null ? lastLogEntry.term : -1;
@@ -217,7 +219,9 @@ export class RaftService {
           term: this.currentTerm,
           voteGranted: true,
         });
-        console.log(`[${this.id}] voted for ${candidateId}`);
+        console.log(
+          `[${this.id} - (${this.currentTerm})] voted for ${candidateId}`,
+        );
         return;
       }
     }
@@ -232,7 +236,9 @@ export class RaftService {
     { term, voteGranted }: VoteReply,
     from: string,
   ) {
-    console.log(`[${this.id}] received vote reply from ${from}`);
+    console.log(
+      `[${this.id} - (${this.currentTerm})] received vote reply from ${from}`,
+    );
     if (term === this.currentTerm && voteGranted) {
       this.votes[from] = true;
       if (this.isCandidate() && this.hasMajority()) {
@@ -240,7 +246,7 @@ export class RaftService {
         this.nextIndex = {};
         this.matchIndex = {};
         this.beginLeaderHeartbeat();
-        console.log(`[${this.id}] became leader`);
+        console.log(`[${this.id} - (${this.currentTerm})] became leader`);
       }
     }
   }
@@ -344,7 +350,7 @@ export class RaftService {
   /* * */
 
   private beginElection() {
-    console.log(`[${this.id}] starting election`);
+    console.log(`[${this.id} - (${this.currentTerm})] starting election`);
     this.state = NodeState.CANDIDATE;
     this.leader = null;
     this.votes = {};
@@ -374,7 +380,8 @@ export class RaftService {
   }
   private hasMajority() {
     return (
-      Object.values(this.votes).filter((v) => v).length >= this.clusterSize / 2
+      Object.values(this.votes).filter((v) => v).length >=
+      Math.ceil(this.clusterSize / 2)
     );
   }
   private lastLogIndex() {
@@ -402,7 +409,9 @@ export class RaftService {
     const id = `${this.id}_${uuidv4()}`;
 
     if (this.isLeader()) {
-      console.log(`[${this.id}] is leader saving entry`);
+      console.log(
+        `[${this.id} - (${this.currentTerm})] is leader saving entry`,
+      );
       const entry: LogEntry = {
         id,
         term: this.currentTerm,
@@ -410,7 +419,9 @@ export class RaftService {
       };
       this.log.push(entry);
     } else if (this.state === NodeState.FOLLOWER && this.leader !== null) {
-      console.log(`[${this.id}] is not leader sending entry to ${this.leader}`);
+      console.log(
+        `[${this.id} - (${this.currentTerm})] is not leader sending entry to ${this.leader}`,
+      );
       this.send(this.leader, {
         type: RPC_TYPE.APPEND_ENTRY,
         id,

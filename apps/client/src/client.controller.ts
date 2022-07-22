@@ -32,7 +32,8 @@ export class ClientController {
     @Param('id') id: string,
     @Body('price', new ParseFloatPipe()) price: number,
   ) {
-    return await this.clientService.registerOffer(id, price);
+    await this.clientService.registerOffer(id, price);
+    return;
   }
 
   @Post('/event')

@@ -29,6 +29,13 @@ export class AppService {
     @Inject('BIDS_QUEUE_SERVICE') private readonly bidsQueueClient: ClientProxy,
   ) {}
 
+  async getLog() {
+    return await lastValueFrom(
+      this.bidsQueueClient.send({ cmd: RepositoryPattern.GetLog }, {}),
+      { defaultValue: [] },
+    );
+  }
+
   async getBuyers() {
     return await lastValueFrom(
       this.bidsQueueClient.send<Buyer[]>(

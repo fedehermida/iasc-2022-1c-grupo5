@@ -17,6 +17,11 @@ import { RepositoryService } from './repository.service';
 export class RepositoryController {
   constructor(private readonly repositoryService: RepositoryService) {}
 
+  @MessagePattern({ cmd: RepositoryPattern.GetLog })
+  async getLog() {
+    return await this.repositoryService.getLog();
+  }
+
   @MessagePattern({ cmd: RepositoryPattern.GetBids })
   async getBids() {
     return await this.repositoryService.findAllBids();

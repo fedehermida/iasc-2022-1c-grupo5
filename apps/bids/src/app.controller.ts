@@ -1,8 +1,4 @@
-import {
-  CreateBidDto,
-  CreateBuyerDto,
-  CreateOfferDto
-} from '@iasc/types';
+import { CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
 import {
   Body,
   Controller,
@@ -10,7 +6,7 @@ import {
   Get,
   Param,
   Post,
-  Put
+  Put,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -26,6 +22,11 @@ export class AppController {
   @Get('/bids')
   async getBids() {
     return await this.appService.getBids();
+  }
+
+  @Get('/log')
+  async getLog() {
+    return await this.appService.getLog();
   }
 
   /* * */

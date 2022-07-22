@@ -234,4 +234,8 @@ export class RepositoryService {
     const bidsExpired = this.findAllBids().filter(bidExpired);
     bidsExpired.forEach((bid) => this.finishBid(bid.id));
   }
+
+  getLog() {
+    return this.raftService.log;
+  }
 }

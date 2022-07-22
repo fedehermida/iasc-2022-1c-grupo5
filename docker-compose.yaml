@@ -127,7 +127,7 @@ services:
       - iasc-api-network
       - raft-network
     deploy:
-      replicas: 3
+      replicas: 5
 
   rabbitmq:
     image: rabbitmq:3.10.6-management
