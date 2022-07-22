@@ -1,6 +1,58 @@
 version: '3.7'
 
 services:
+  raft-pub-sub:
+    image: redis:alpine
+    networks:
+      - raft-network
+
+  client-a:
+    container_name: client-a
+    build:
+      context: .
+      args:
+        SERVICE: client
+      target: development
+    volumes:
+      - './apps/client:/workspace/apps/client'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service client
+    ports:
+      - 3001:3001
+    env_file: ${CLIENT_ENV}
+    environment:
+      - PORT=3001
+      - ENVIRONMENT=docker
+      - SERVICE_NAME=client-a
+      - BIDS_SERVICE=bids
+      - CLIENT_NAME=client-a
+    networks:
+      - iasc-api-network
+
+  client-b:
+    container_name: client-b
+    build:
+      context: .
+      args:
+        SERVICE: client
+      target: development
+    volumes:
+      - './apps/client:/workspace/apps/client'
+      - './libs:/workspace/libs'
+      - './node_modules:/workspace/node_modules'
+    command: npm run start:service client
+    ports:
+      - 3002:3002
+    env_file: ${CLIENT_ENV}
+    environment:
+      - PORT=3002
+      - ENVIRONMENT=docker
+      - SERVICE_NAME=client-b
+      - BIDS_SERVICE=bids
+      - CLIENT_NAME=client-b
+    networks:
+      - iasc-api-network
 
   bids:
     container_name: bids
@@ -51,7 +103,7 @@ services:
       - iasc-api-network
 
   repository:
-    container_name: repository
+    # container_name: repository
     build:
       context: .
       args:
@@ -65,14 +117,17 @@ services:
       - './libs:/workspace/libs'
       - './node_modules:/workspace/node_modules'
     command: npm run start:service repository
-    ports:
-      - 6006:3000
-      - 20005:9229
+    # ports:
+      # - 6006:3000
+      # - 20005:9229
     env_file: ${REPOSITORY_ENV}
     environment:
       - ENVIRONMENT=docker
     networks:
       - iasc-api-network
+      - raft-network
+    deploy:
+      replicas: 5
 
   rabbitmq:
     image: rabbitmq:3.10.6-management
@@ -91,3 +146,4 @@ services:
 networks:
   iasc-api-network:
     driver: bridge
+  raft-network:

@@ -1,31 +1,18 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
-import { ClientGateway } from './client.gateway';
 
-const names = {
-  '3001': 'Alice',
-  '3002': 'Bob',
-  '3003': 'Charlie',
-};
-
-
-const BIDS_SERVICE = `http://127.0.0.1:6003`;
 @Injectable()
 export class ClientService {
-  ip = `http://127.0.0.1:${process.env.PORT}`;
+  private ip = `http://${process.env.SERVICE_NAME}:${process.env.PORT}`;
 
-
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly clientGateway: ClientGateway,
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
 
   async register(tags: string[]) {
     const a = await this.httpService.post(
-      `${BIDS_SERVICE}/buyers`,
+      `http://${process.env.BIDS_SERVICE}:3000/buyers`,
       {
-        name: names[process.env.PORT],
+        name: process.env.CLIENT_NAME,
         ip: this.ip,
         tags,
       },
@@ -35,16 +22,16 @@ export class ClientService {
     return data;
   }
 
-  async registerOffer(id) {
+  async registerOffer(id: string, price: number) {
     const data = await lastValueFrom(
-      this.httpService.put(`${BIDS_SERVICE}/bids/${id}`, {
+      this.httpService.put(`http://${process.env.BIDS_SERVICE}:3000/bids/${id}`, {
         ip: this.ip,
-        price: Math.round(Math.random() * 5000),
+        price,
       }),
-    );
-  }
-
-  async newBid(bid) {
-    this.clientGateway.server.emit('bid_created', bid);
+    ).then((res) => {
+      console.log(res.data);
+      return res;
+    });
+    return data;
   }
 }

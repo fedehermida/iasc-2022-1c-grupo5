@@ -12,32 +12,36 @@ export class EventController {
   }
 
   @EventPattern('publish-notification')
-  postEvent(data: JSON): string {
-    console.log(JSON.stringify(data))
-    console.log(`Bid ${JSON.stringify(data["bid"])} -  ${data["ip"]} has been recently published`);
-    this.eventService.publishNotification(data["bid"],  data["ip"], "publish");
-
-    return 'POST Event';
+  postEvent(data: JSON) {
+    console.log(JSON.stringify(data));
+    console.log(
+      `Bid ${JSON.stringify(data['bid'])} -  ${
+        data['ip']
+      } has been recently published`,
+    );
+    this.eventService.publishNotification(data['bid'], data['ip'], 'publish');
   }
 
-  @EventPattern('close-notification')
-  patchEvent(data: string): string {
+  @EventPattern('bid-ended')
+  async bidEnded(data: string) {
+    console.log(`Bid ${data} has ended`);
+  }
+
+  @EventPattern('bid-closed')
+  async bidClosed(data: string) {
     console.log(`Bid ${data} has been closed`);
-    this.eventService.publishNotification(data["bid"],  data["ip"], "close");
-    return 'PATCH EVENT';
+    this.eventService.publishNotification(data['bid'], data['ip'], 'close');
   }
 
   @EventPattern('offer-notification')
-  deleteEvent(data: string): string {
+  deleteEvent(data: string) {
     console.log(`A new offer has been placed for Bid: ${data}`);
-    this.eventService.publishNotification(data["bid"],  data["ip"], "offer");
-    return 'DELETE event';
+    this.eventService.publishNotification(data['bid'], data['ip'], 'offer');
   }
 
   @EventPattern('finish-notification')
-  endEvent(data: string): string {
+  endEvent(data: string) {
     console.log(`A new offer has been placed for Bid: ${data}`);
-    this.eventService.publishNotification(data["bid"],  data["ip"], "finish")
-    return 'DELETE event';
+    this.eventService.publishNotification(data['bid'], data['ip'], 'finish');
   }
 }
