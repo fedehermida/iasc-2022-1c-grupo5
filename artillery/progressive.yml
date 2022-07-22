@@ -1,0 +1,51 @@
+config:
+  target: "http://localhost"
+  processor: "./post-body.js"
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      name: Warm up
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 15
+      name: Ramp up load
+    - duration: 90
+      arrivalRate: 15
+      name: Sustained load
+  environments:
+    prod:
+      target: "http://localhost"
+      phases:
+        - duration: 120
+          arrivalRate: 10
+    stage:
+      target: "http://localhost:3000"
+      phases:
+        - duration: 120
+          arrivalRate: 10
+scenarios:
+  - name: "Buyers & Bids"
+    flow:
+    - function: "genPayloads"
+    - post:
+        url: "/bids/buyers"
+        json:
+          "{{ buyerPayload1 }}"
+        expect:
+          - statusCode: 201
+    - post:
+        url: "/bids/buyers"
+        json:
+          "{{ buyerPayload2 }}"
+        expect:
+          - statusCode: 201
+    - post:
+        url: "/bids/bids"
+        json:
+          "{{ bidPayload }}"
+        expect:
+          - statusCode: 201
+  - name: "GET /health"
+    flow:
+    - get:
+        url: "/health"
