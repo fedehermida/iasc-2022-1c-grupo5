@@ -17,13 +17,6 @@ export class RepositoryController {
     return await this.repositoryService.findAllBids();
   }
 
-  @Get('/reset')
-  async reset() {
-    this.repositoryService.bids = [];
-    this.repositoryService.buyers = [];
-    return;
-  }
-
   @Get('/buyers')
   @MessagePattern({ cmd: 'get_buyers' })
   async getBuyers() {
@@ -69,7 +62,6 @@ export class RepositoryController {
 
   @Interval(1000)
   async handleCron() {
-    console.log('Called when the current minute is 1');
     return this.repositoryService.endBidExpired();
   }
 }

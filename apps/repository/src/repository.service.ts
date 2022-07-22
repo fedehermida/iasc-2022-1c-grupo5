@@ -6,20 +6,20 @@ import { RaftService } from './raft/raft.service';
 
 type BidCondition = (bid: Bid) => boolean;
 
-const bidHasTags =
-  (tags: string[]): BidCondition =>
-  ({ tags: bidTags }) =>
-    tags.some((tag) => bidTags.includes(tag));
+const hasTags =
+  (queryTags: string[]) =>
+  ({ tags }: Bid | Buyer) =>
+    tags.some((tag) => queryTags.includes(tag));
 
 const bidStateIs =
-  (state: BidState): BidCondition =>
+  (state: BidState) =>
   ({ state: bidState }) =>
     bidState === state;
 
 @Injectable()
 export class RepositoryService {
-  bids: Bid[] = [];
-  buyers: Buyer[] = [];
+  // bids: Bid[] = [];
+  // buyers: Buyer[] = [];
 
   constructor(
     @Inject('EVENT_QUEUE_SERVICE')
@@ -28,26 +28,62 @@ export class RepositoryService {
   ) {}
 
   async findBidsByConditions(...conditions: BidCondition[]) {
-    return this.bids.filter((bid) =>
+    return this.findAllBids().filter((bid) =>
       conditions.every((condition) => condition(bid)),
     );
+  }
+
+  findAllBids(): Bid[] {
+    return this.raftService.log.reduce((prev, curr) => {
+      switch (curr.data.type) {
+        case 'create_bid': {
+          return [...prev, curr.data.bid];
+        }
+        case 'update_bid': {
+          return prev.map((bid) => {
+            if (bid.id == curr.data.id) {
+              return { ...bid, ...curr.data.bid };
+            }
+            return bid;
+          });
+        }
+        default:
+          break;
+      }
+      return prev;
+    }, [] as Bid[]);
+  }
+
+  findAllBuyers(): Buyer[] {
+    return this.raftService.log.reduce((prev, curr) => {
+      switch (curr.data.type) {
+        case 'create_buyer': {
+          return [...prev, curr.data.buyer];
+        }
+        default: {
+          return prev;
+        }
+      }
+    }, [] as Buyer[]);
   }
 
   /* BUYERS */
 
   async createBuyer(buyer: Buyer) {
-    // this.raftService.append({ buyer });
-    await this.buyers.push(buyer);
-    return buyer;
+    const newBuyer = { ...buyer, id: uuidv4() };
+    this.raftService.append({
+      type: 'create_buyer',
+      buyer: newBuyer,
+    });
+    return newBuyer;
   }
 
   async findBuyerById(ip: string) {
-    return await this.buyers.find((buyer) => buyer.ip === ip);
+    return this.findAllBuyers().filter((buyer) => buyer.ip === ip);
   }
 
-  async findAllBuyers() {
-    // return this.raftService.log;
-    return await this.buyers;
+  async buyersForTags(tags: string[]) {
+    return this.findAllBuyers().filter(hasTags(tags));
   }
 
   /* BIDS */
@@ -55,39 +91,35 @@ export class RepositoryService {
   async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
     const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
     newBid.date_create = Date.now();
-    await this.bids.push(newBid);
 
-    var buyers = await this.buyers.filter(
-      (buyer) =>
-        newBid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
-    );
-    var ips = await buyers.map((buyer) => buyer['ip']);
-    if (ips.length > 0) {
-      ips.forEach((ip) => {
-        this.eventQueueClient.emit('publish-notification', {
-          bid: {
-            id: newBid.id,
-            basePrice: newBid.basePrice,
-            duration: newBid.duration,
-            item: newBid.item,
-          },
-          ip: ip,
-        });
+    this.raftService.append({
+      type: 'create_bid',
+      bid: newBid,
+    });
+
+    const buyers = await this.buyersForTags(bid.tags);
+
+    buyers.forEach(({ ip }) => {
+      this.eventQueueClient.emit('publish-notification', {
+        bid: {
+          id: newBid.id,
+          basePrice: newBid.basePrice,
+          duration: newBid.duration,
+          item: newBid.item,
+        },
+        ip: ip,
       });
-    }
+    });
+
     return { bid: newBid };
   }
 
-  async findAllBids() {
-    return await this.bids;
-  }
-
-  async findBidById(id: string) {
-    return await this.bids.find((bid) => bid.id === id);
+  findBidById(id: string) {
+    return this.findAllBids().find((bid) => bid.id === id);
   }
 
   async findBidsByTags(tags: string[]) {
-    return await this.findBidsByConditions(bidHasTags(tags));
+    return await this.findBidsByConditions(hasTags(tags));
   }
 
   async findBidsByState(state: BidState) {
@@ -97,12 +129,12 @@ export class RepositoryService {
   async findOpenBidsForTags(tags: string[]) {
     return await this.findBidsByConditions(
       bidStateIs(BidState.OPEN),
-      bidHasTags(tags),
+      hasTags(tags),
     );
   }
 
-  async findBiggestOffer(id: string) {
-    const bid = await this.findBidById(id);
+  findBiggestOffer(id: string): Offer | undefined {
+    const bid = this.findBidById(id);
     if (bid && bid.offers.length > 0) {
       return bid.offers.reduce((biggest, offer) =>
         offer.price > biggest.price ? offer : biggest,
@@ -111,15 +143,19 @@ export class RepositoryService {
   }
 
   async updateBid(id: string, bid: Partial<Bid>) {
-    const updatedBid = { ...(await this.findBidById(id)), ...bid };
-    this.bids = this.bids.map((b) => (b.id === id ? updatedBid : b));
-    return updatedBid;
+    this.raftService.append({
+      type: 'update_bid',
+      bid,
+      id,
+    });
+
+    return this.findBidById(id);
   }
 
   async getCurrentBidPrice(id: string) {
-    const bid = await this.findBidById(id);
+    const bid = this.findBidById(id);
     if (bid) {
-      const biggestOffer = await this.findBiggestOffer(id);
+      const biggestOffer = this.findBiggestOffer(id);
       return biggestOffer ? biggestOffer.price : bid.basePrice;
     }
   }
@@ -127,60 +163,52 @@ export class RepositoryService {
   /* * */
 
   async cancelBid(id: string) {
-    this.bids = this.bids.map((bid) => {
-      if (bid.id == id && bid.state == 'open') {
-        return { ...bid, state: BidState.CANCELED };
-      }
-      return bid;
+    this.raftService.append({
+      type: 'update_bid',
+      id,
+      bid: { state: BidState.CANCELED },
     });
-    var bid = this.bids.filter((bid) => bid['id'] == id)[0];
-    var buyers = await this.buyers.filter(
-      (buyer) =>
-        bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
-    );
-    var ips = await buyers.map((buyer) => buyer['ip']);
-    if (ips.length > 0) {
-      ips.forEach((ip) => {
-        this.eventQueueClient.emit('close-notification', { bid: id, ip: ip });
+
+    const bid = this.findBidById(id);
+    const buyers = await this.buyersForTags(bid.tags);
+
+    buyers.forEach(({ ip }) => {
+      this.eventQueueClient.emit('close-notification', { bid: id, ip: ip });
+    });
+
+    return bid;
+  }
+
+  async finishBid(id: string) {
+    this.raftService.append({
+      type: 'update_bid',
+      id,
+      bid: { state: BidState.ENDED },
+    });
+
+    const bid = this.findBidById(id);
+    const buyers = await this.buyersForTags(bid.tags);
+
+    const biggest = await this.findBiggestOffer(id);
+
+    if (biggest !== undefined) {
+      const { ip: winner, price } = biggest;
+      buyers.forEach(({ ip }) => {
+        this.eventQueueClient.emit('finish-notification', {
+          bid: { id, winner, price },
+          ip,
+        });
+      });
+    } else {
+      buyers.forEach(({ ip }) => {
+        this.eventQueueClient.emit('finish-notification', {
+          bid: { id, winner: '', price: 0 },
+          ip,
+        });
       });
     }
-    return await this.findBidById(id);
-  }
-  async finishBid(id: string) {
-    this.bids = this.bids.map((bid) => {
-      if (bid.id === id) {
-        return { ...bid, state: BidState.ENDED };
-      }
-      return bid;
-    });
-    var bid = this.bids.filter((bid) => bid['id'] == id)[0];
-    var buyers = await this.buyers.filter(
-      (buyer) =>
-        bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
-    );
-    var ips = await buyers.map((buyer) => buyer['ip']);
-    if (ips.length > 0) {
-      if (bid.offers.length > 0) {
-        ips.forEach((ip) => {
-          this.eventQueueClient.emit('finish-notification', {
-            bid: {
-              id: id,
-              winner: bid.offers[bid.offers.length - 1].ip,
-              price: bid.offers[bid.offers.length - 1].price,
-            },
-            ip: ip,
-          });
-        });
-      } else {
-        ips.forEach((ip) => {
-          this.eventQueueClient.emit('finish-notification', {
-            bid: { id: id, winner: 'Sin ofertas', price: 'Sin ofertas' },
-            ip: ip,
-          });
-        });
-      }
-    }
-    return await this.findBidById(id);
+
+    return bid;
   }
 
   async registerOffer(id: string, offer: Offer) {
@@ -191,12 +219,17 @@ export class RepositoryService {
         (bid.offers.length == 0 ||
           offer.price > bid.offers[bid.offers.length - 1].price)
       ) {
-        bid.offers.push(offer);
-        var buyers = await this.buyers.filter(
+        this.raftService.append({
+          type: 'update_bid',
+          id,
+          bid: { offers: [...bid.offers, offer] },
+        });
+        
+        const buyers = await this.findAllBuyers().filter(
           (buyer) =>
             bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
         );
-        var ips = await buyers.map((buyer) => buyer['ip']);
+        const ips = await buyers.map((buyer) => buyer['ip']);
         if (ips.length > 0) {
           ips.forEach((ip) => {
             this.eventQueueClient.emit('offer-notification', {
@@ -211,13 +244,11 @@ export class RepositoryService {
   }
 
   async endBidExpired() {
-    const bidsExpired = this.bids.filter(
+    const bidsExpired = this.findAllBids().filter(
       (bid) =>
         bid.date_create + bid.duration * 1000 <= Date.now() &&
         bid.state == 'open',
     );
-    console.log('Expiro');
-    console.log(Array(bidsExpired).toString());
     bidsExpired.forEach((bid) => this.finishBid(bid.id));
   }
 }
