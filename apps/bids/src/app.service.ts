@@ -31,14 +31,17 @@ export class AppService {
 
   async getBuyers() {
     return await lastValueFrom(
-      this.bidsQueueClient.send<Buyer[]>({ cmd: RepositoryPattern.GetBuyers }, {}),
+      this.bidsQueueClient.send<Buyer[]>(
+        { cmd: RepositoryPattern.GetBuyers },
+        {},
+      ),
       { defaultValue: [] as Buyer[] },
     );
   }
 
   async getBids() {
     return await lastValueFrom(
-      this.bidsQueueClient.send<Bid[]>({ cmd: RepositoryPattern.GetBuyers }, {}),
+      this.bidsQueueClient.send<Bid[]>({ cmd: RepositoryPattern.GetBids }, {}),
       { defaultValue: [] as Bid[] },
     );
   }
