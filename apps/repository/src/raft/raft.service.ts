@@ -398,36 +398,27 @@ export class RaftService {
   }
   /* * */
 
-  append(data) {
+  append(data: LogEntry['data']) {
     const id = `${this.id}_${uuidv4()}`;
 
-    const performRequest = () => {
-      let entry: LogEntry;
-
-      if (this.isLeader()) {
-        entry = {
-          id,
-          term: this.currentTerm,
-          data,
-        };
-        this.log.push(entry);
-      } else {
-        console.log(
-          `[${this.id}] is not leader sending entry to ${this.leader}`,
-        );
-        this.send(this.leader, {
-          type: RPC_TYPE.APPEND_ENTRY,
-          id,
-          data,
-          term: this.currentTerm,
-        });
-      }
-    };
-
     if (this.isLeader()) {
-      performRequest();
-    } else if (this.state === NodeState.FOLLOWER && this.leader != null) {
-      performRequest();
+      console.log(`[${this.id}] is leader saving entry`);
+      const entry: LogEntry = {
+        id,
+        term: this.currentTerm,
+        data,
+      };
+      this.log.push(entry);
+    } else if (this.state === NodeState.FOLLOWER && this.leader !== null) {
+      console.log(`[${this.id}] is not leader sending entry to ${this.leader}`);
+      this.send(this.leader, {
+        type: RPC_TYPE.APPEND_ENTRY,
+        id,
+        data,
+        term: this.currentTerm,
+      });
     }
+
+    // this.pendingEntries.push(performRequest);
   }
 }

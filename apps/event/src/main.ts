@@ -5,7 +5,7 @@ import { EventModule } from './event.module';
 async function bootstrap() {
   const app = await NestFactory.create(EventModule);
 
-  const rabbitMQService = app.connectMicroservice<MicroserviceOptions>({
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [`amqp://${process.env.RABBITMQ_URL}`],

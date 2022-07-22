@@ -16,7 +16,7 @@ export type Bid = {
   };
   offers: Offer[];
   state: BidState;
-  date_create: number;
+  createdAt: number;
 };
 
 export enum BidState {
@@ -28,5 +28,5 @@ export enum BidState {
 export type Offer = {
   ip: string;
   price: number;
-  timestamp: number;
+  createdAt: number;
 };

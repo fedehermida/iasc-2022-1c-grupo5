@@ -1,6 +1,23 @@
+import { Bid, Buyer } from '@iasc/types';
+
+type LogEntryData =
+  | {
+      type: 'create_bid';
+      bid: Bid;
+    }
+  | {
+      type: 'update_bid';
+      bid: Partial<Bid>;
+      id: string;
+    }
+  | {
+      type: 'create_buyer';
+      buyer: Buyer;
+    };
+
 export type LogEntry = {
   term: number;
-  data: any;
+  data: LogEntryData;
   index?: number;
   id: string;
 };

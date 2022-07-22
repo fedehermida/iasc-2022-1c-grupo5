@@ -1,4 +1,8 @@
-import { BidState, CreateBidDto, CreateBuyerDto, CreateOfferDto } from '@iasc/types';
+import {
+  CreateBidDto,
+  CreateBuyerDto,
+  CreateOfferDto
+} from '@iasc/types';
 import {
   Body,
   Controller,
@@ -19,52 +23,30 @@ export class AppController {
     return await this.appService.getBuyers();
   }
 
+  @Get('/bids')
+  async getBids() {
+    return await this.appService.getBids();
+  }
+
+  /* * */
+
   @Post('/buyers')
   async registerBuyer(@Body() buyer: CreateBuyerDto) {
-    console.log('POST /buyers');
     return await this.appService.registerBuyer(buyer);
   }
 
   @Post('/bids')
   async createBid(@Body() bid: CreateBidDto) {
-    console.log('POST /bids');
-    return await this.appService.createBid({ ...bid, state: BidState.OPEN });
-  }
-  @Get('/bids')
-  async getBids() {
-    console.log('GET /bids');
-    //return await this.appService.createBid({ ...bid, state: BidState.OPEN });
+    return await this.appService.createBid(bid);
   }
 
   @Delete('/bids/:id')
   async deleteBid(@Param('id') id: string) {
-    console.log(`DELETE /bids/${id}`);
     return await this.appService.cancelBid(id);
   }
 
   @Put('/bids/:id')
   async registerOffer(@Param('id') id: string, @Body() offer: CreateOfferDto) {
-    console.log(`PUT /bids/${id}`);
-    return await this.appService.registerOffer(id, {
-      ...offer,
-      timestamp: new Date().getTime(),
-    });
-  }
-
-  /* HEALTH */
-
-  @Get('/health')
-  bidsHealth(): string {
-    return this.appService.getHello();
-  }
-
-  @Get('/event-health')
-  async getEventHello(): Promise<string> {
-    return await this.appService.getEventHealth();
-  }
-
-  @Get('/repository-health')
-  async getRepositoryHello(): Promise<string> {
-    return await this.appService.getRepositoryHealth();
+    return await this.appService.registerOffer(id, offer);
   }
 }

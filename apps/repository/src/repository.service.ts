@@ -3,24 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { v4 as uuidv4 } from 'uuid';
 import { RaftService } from './raft/raft.service';
+import { bidExpired, bidStateIs, hasTags } from './utils';
 
 type BidCondition = (bid: Bid) => boolean;
-
-const hasTags =
-  (queryTags: string[]) =>
-  ({ tags }: Bid | Buyer) =>
-    tags.some((tag) => queryTags.includes(tag));
-
-const bidStateIs =
-  (state: BidState) =>
-  ({ state: bidState }) =>
-    bidState === state;
-
 @Injectable()
 export class RepositoryService {
-  // bids: Bid[] = [];
-  // buyers: Buyer[] = [];
-
   constructor(
     @Inject('EVENT_QUEUE_SERVICE')
     private readonly eventQueueClient: ClientProxy,
@@ -34,31 +21,31 @@ export class RepositoryService {
   }
 
   findAllBids(): Bid[] {
-    return this.raftService.log.reduce((prev, curr) => {
-      switch (curr.data.type) {
+    return this.raftService.log.reduce((prev, { data }) => {
+      switch (data.type) {
         case 'create_bid': {
-          return [...prev, curr.data.bid];
+          return [...prev, data.bid];
         }
         case 'update_bid': {
           return prev.map((bid) => {
-            if (bid.id == curr.data.id) {
-              return { ...bid, ...curr.data.bid };
+            if (bid.id == data.id) {
+              return { ...bid, ...data.bid };
             }
             return bid;
           });
         }
-        default:
-          break;
+        default: {
+          return prev;
+        }
       }
-      return prev;
     }, [] as Bid[]);
   }
 
   findAllBuyers(): Buyer[] {
-    return this.raftService.log.reduce((prev, curr) => {
-      switch (curr.data.type) {
+    return this.raftService.log.reduce((prev, { data }) => {
+      switch (data.type) {
         case 'create_buyer': {
-          return [...prev, curr.data.buyer];
+          return [...prev, data.buyer];
         }
         default: {
           return prev;
@@ -89,8 +76,13 @@ export class RepositoryService {
   /* BIDS */
 
   async createBid(bid: Omit<Bid, 'id' | 'offers' | 'state'>) {
-    const newBid = { ...bid, id: uuidv4(), state: BidState.OPEN, offers: [] };
-    newBid.date_create = Date.now();
+    const newBid = {
+      ...bid,
+      id: uuidv4(),
+      state: BidState.OPEN,
+      offers: [],
+      createdAt: Date.now(),
+    };
 
     this.raftService.append({
       type: 'create_bid',
@@ -101,13 +93,13 @@ export class RepositoryService {
 
     buyers.forEach(({ ip }) => {
       this.eventQueueClient.emit('publish-notification', {
+        ip,
         bid: {
           id: newBid.id,
           basePrice: newBid.basePrice,
           duration: newBid.duration,
           item: newBid.item,
         },
-        ip: ip,
       });
     });
 
@@ -199,6 +191,7 @@ export class RepositoryService {
           ip,
         });
       });
+      return { bid, winner };
     } else {
       buyers.forEach(({ ip }) => {
         this.eventQueueClient.emit('finish-notification', {
@@ -206,9 +199,8 @@ export class RepositoryService {
           ip,
         });
       });
+      return { bid };
     }
-
-    return bid;
   }
 
   async registerOffer(id: string, offer: Offer) {
@@ -224,31 +216,22 @@ export class RepositoryService {
           id,
           bid: { offers: [...bid.offers, offer] },
         });
-        
-        const buyers = await this.findAllBuyers().filter(
-          (buyer) =>
-            bid['tags'].filter((bid) => buyer['tags'].includes(bid)).length > 0,
-        );
-        const ips = await buyers.map((buyer) => buyer['ip']);
-        if (ips.length > 0) {
-          ips.forEach((ip) => {
-            this.eventQueueClient.emit('offer-notification', {
-              bid: { id: bid.id, offer: offer },
-              ip: ip,
-            });
+
+        const buyers = await this.buyersForTags(bid.tags);
+
+        buyers.forEach(({ ip }) => {
+          this.eventQueueClient.emit('offer-notification', {
+            bid: { id: bid.id, offer: offer },
+            ip,
           });
-        }
+        });
       }
     }
     return bid;
   }
 
   async endBidExpired() {
-    const bidsExpired = this.findAllBids().filter(
-      (bid) =>
-        bid.date_create + bid.duration * 1000 <= Date.now() &&
-        bid.state == 'open',
-    );
+    const bidsExpired = this.findAllBids().filter(bidExpired);
     bidsExpired.forEach((bid) => this.finishBid(bid.id));
   }
 }

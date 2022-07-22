@@ -11,16 +11,20 @@ export class EventService {
     return 'Hello World from Repository Service!';
   }
 
-
-   async publishNotification(bid: JSON, ip: String, event:String):Promise<any>{
-    console.log(`${ip}/event`)
-    return this.httpService.post(`${ip}/event`,
-       {'data':bid,
-        'event': event 
-      }, {
-      headers: {
-      'Content-Type': 'application/json'
-      }
-    })
+  async publishNotification(
+    bid: JSON,
+    ip: String,
+    event: String,
+  ): Promise<any> {
+    console.log(`${ip}/event`);
+    return this.httpService.post(
+      `${ip}/event`,
+      { data: bid, event: event },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }

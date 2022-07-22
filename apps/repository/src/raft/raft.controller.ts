@@ -33,12 +33,6 @@ export class RaftController {
     this.raftService.handleMessage(data);
   }
 
-  @Post('/append')
-  async append(@Body() data) {
-    this.raftService.append(data);
-    return data;
-  }
-
   @Get('/log')
   async getLog() {
     return this.raftService.log;

@@ -2,12 +2,12 @@ import { IsNumber, IsPositive } from '@nestjs/class-validator';
 import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsDate,
-  IsDefined, IsNotEmpty,
+  IsDefined,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateBuyerDto {
@@ -43,9 +43,10 @@ export class CreateBidDto {
 
   @IsNumber()
   basePrice: number;
+
   @IsNumber()
   @IsOptional()
-  date_create: number;
+  createdAt: number;
 
   @IsArray()
   tags: string[];

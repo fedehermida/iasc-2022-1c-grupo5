@@ -1,63 +1,65 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+  CancelBidMessage,
+  CreateBidMessage,
+  CreateBuyerMessage,
+  EndBidMessage,
+  GetBidPriceMessage,
+  GetBidsByTagsMessage,
+  RegisterOfferMessage,
+} from '@iasc/types/messages';
+import { RepositoryPattern } from '@iasc/types/patterns';
+import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Interval } from '@nestjs/schedule';
 import { RepositoryService } from './repository.service';
-import { Cron, Interval } from '@nestjs/schedule';
 
 @Controller()
 export class RepositoryController {
   constructor(private readonly repositoryService: RepositoryService) {}
 
-  @Get('/bids/:id')
-  async getBid(@Param('id') id: string) {
-    return await this.repositoryService.findBidById(id);
-  }
-
-  @Get('/bids')
+  @MessagePattern({ cmd: RepositoryPattern.GetBids })
   async getBids() {
     return await this.repositoryService.findAllBids();
   }
 
-  @Get('/buyers')
-  @MessagePattern({ cmd: 'get_buyers' })
+  @MessagePattern({ cmd: RepositoryPattern.GetBuyers })
   async getBuyers() {
     return await this.repositoryService.findAllBuyers();
   }
 
-  /* Mensajes que recibe desde "bids service" */
-
-  @MessagePattern({ cmd: 'create_buyer' })
-  async createBuyer(dto) {
-    return await this.repositoryService.createBuyer(dto.buyer);
+  @MessagePattern({ cmd: RepositoryPattern.CreateBuyer })
+  async createBuyer(@Payload() { buyer }: CreateBuyerMessage) {
+    return await this.repositoryService.createBuyer(buyer);
   }
 
-  @MessagePattern({ cmd: 'get_bids_by_tag' })
-  async getBidsByTag(@Payload() dto) {
-    return await this.repositoryService.findOpenBidsForTags(dto.tags);
+  @MessagePattern({ cmd: RepositoryPattern.GetBidsByTags })
+  async getBidsByTag(@Payload() { tags }: GetBidsByTagsMessage) {
+    return await this.repositoryService.findOpenBidsForTags(tags);
   }
 
-  @MessagePattern({ cmd: 'get_current_price' })
-  async getCurrentBidPrice(@Payload() dto) {
-    return await this.repositoryService.getCurrentBidPrice(dto.id);
+  @MessagePattern({ cmd: RepositoryPattern.GetBidPrice })
+  async getCurrentBidPrice(@Payload() { id }: GetBidPriceMessage) {
+    return await this.repositoryService.getCurrentBidPrice(id);
   }
 
-  @MessagePattern({ cmd: 'create_bid' })
-  async createBid(@Payload() dto) {
-    return await this.repositoryService.createBid(dto.bid);
+  @MessagePattern({ cmd: RepositoryPattern.CreateBid })
+  async createBid(@Payload() { bid }: CreateBidMessage) {
+    return await this.repositoryService.createBid(bid);
   }
 
-  @MessagePattern({ cmd: 'cancel_bid' })
-  async cancelBid(@Payload() dto) {
-    return await this.repositoryService.cancelBid(dto.id);
+  @MessagePattern({ cmd: RepositoryPattern.CancelBid })
+  async cancelBid(@Payload() { id }: CancelBidMessage) {
+    return await this.repositoryService.cancelBid(id);
   }
 
-  @MessagePattern({ cmd: 'end_bid' })
-  async endBid(@Payload() dto) {
-    return await this.repositoryService.finishBid(dto.id);
+  @MessagePattern({ cmd: RepositoryPattern.EndBid })
+  async endBid(@Payload() { id }: EndBidMessage) {
+    return await this.repositoryService.finishBid(id);
   }
 
-  @MessagePattern({ cmd: 'register_offer' })
-  async registerOffer(@Payload() dto) {
-    return await this.repositoryService.registerOffer(dto.id, dto.offer);
+  @MessagePattern({ cmd: RepositoryPattern.RegisterOffer })
+  async registerOffer(@Payload() { id, offer }: RegisterOfferMessage) {
+    return await this.repositoryService.registerOffer(id, offer);
   }
 
   @Interval(1000)
