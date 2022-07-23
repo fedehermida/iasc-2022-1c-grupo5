@@ -98,7 +98,7 @@ services:
       - iasc-api-network
 
   repository:
-    # container_name: repository
+    container_name: repository
     build:
       context: .
       args:
@@ -112,9 +112,6 @@ services:
       - './libs:/workspace/libs'
       - './node_modules:/workspace/node_modules'
     command: npm run start:service repository
-    # ports:
-    # - 6006:3000
-    # - 20005:9229
     env_file: ${REPOSITORY_ENV}
     environment:
       - ENVIRONMENT=docker
