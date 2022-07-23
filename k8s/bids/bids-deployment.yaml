@@ -22,8 +22,6 @@ spec:
               value: bids
             - name: EVENT_URL
               value: event-cluster-ip-service:3000
-            - name: REPOSITORY_URL
-              value: repository-cluster-ip-service:3000
             - name: RABBITMQ_URL
               value: rabbitmq:5672
           resources:

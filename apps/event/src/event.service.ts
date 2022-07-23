@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
+import { Message } from '../../repository/src/raft/raft.types';
 
 @Injectable()
 export class EventService {
@@ -12,20 +13,24 @@ export class EventService {
 
   async publishNotification(
     bid: JSON,
-    ip: String,
-    event: String,
+    ip: string,
+    event: string,
   ): Promise<any> {
     console.log(`${ip}/event`);
-    return await lastValueFrom(
-      this.httpService.post(
-        `${ip}/event`,
-        { data: bid, event: event },
-        {
-          headers: {
-            'Content-Type': 'application/json',
+    try {
+      return await lastValueFrom(
+        this.httpService.post(
+          `${ip}/event`,
+          { data: bid, event: event },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
           },
-        },
-      ),
-    );
+        ),
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
 }

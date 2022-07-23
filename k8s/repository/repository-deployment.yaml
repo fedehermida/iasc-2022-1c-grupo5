@@ -6,6 +6,7 @@ spec:
   selector:
     matchLabels:
       component: repository
+  replicas: 5
   template:
     metadata:
       labels:
@@ -21,3 +22,9 @@ spec:
               value: repository
             - name: RABBITMQ_URL
               value: rabbitmq:5672
+            - name: EVENT_URL
+              value: event-cluster-ip-service:3000
+            - name: BIDS_URL
+              value: bids-cluster-ip-service:3000
+            - name: REDIS_HOST
+              value: redis-cluster-ip-service
